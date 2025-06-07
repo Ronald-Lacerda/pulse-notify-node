@@ -3,8 +3,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Elementos do DOM
     const totalUsersEl = document.getElementById('total-users');
-    const activeUsersEl = document.getElementById('active-users');
-    const inactiveUsersEl = document.getElementById('inactive-users');
     const usersTableBody = document.getElementById('users-table-body');
     const notificationForm = document.getElementById('notification-form');
     const sendTypeSelect = document.getElementById('send-type');
@@ -219,8 +217,6 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     function updateStatistics(data) {
         totalUsersEl.textContent = data.total;
-        activeUsersEl.textContent = data.active;
-        inactiveUsersEl.textContent = data.total - data.active;
     }
 
     /**
