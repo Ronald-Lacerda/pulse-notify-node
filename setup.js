@@ -82,7 +82,7 @@ VAPID_EMAIL=seu-email@exemplo.com
 
 module.exports = {
     // URL do servidor (ajuste conforme necessário)
-    SERVER_URL: process.env.SERVER_URL,
+    SERVER_URL: window.location.origin;,
 
     // Configurações de notificação
     notification: {
