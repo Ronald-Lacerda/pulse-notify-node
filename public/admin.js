@@ -19,6 +19,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const clicksTableBody = document.getElementById('clicks-table-body');
     const refreshStatsBtn = document.getElementById('refresh-stats-btn');
 
+    // Elementos de histórico de notificações
+    const notificationsTableBody = document.getElementById('notifications-table-body');
+    const refreshNotificationsBtn = document.getElementById('refresh-notifications-btn');
+
     // Modal
     const confirmModal = document.getElementById('confirm-modal');
     const confirmMessage = document.getElementById('confirm-message');
@@ -68,6 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
     logoutBtn.addEventListener('click', handleLogout);
     copyLinkBtn.addEventListener('click', copyShareableLink);
     refreshStatsBtn.addEventListener('click', loadClickStats);
+    refreshNotificationsBtn.addEventListener('click', loadNotifications);
 
     /**
      * Verifica autenticação do usuário
@@ -96,6 +101,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 setupAdminInterface();
                 loadUsers();
                 loadClickStats();
+                loadNotifications();
             } else {
                 redirectToLogin();
             }
@@ -239,6 +245,28 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
+     * Carrega histórico de notificações
+     */
+    async function loadNotifications() {
+        try {
+            showNotificationsLoading();
+            
+            const response = await authenticatedFetch(`${SERVER_URL}/api/notifications`);
+            
+            if (!response.ok) {
+                throw new Error(`Erro: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            updateNotificationsTable(data.notifications);
+            
+        } catch (error) {
+            console.error('Erro ao carregar notificações:', error);
+            showNotificationsError('Erro ao carregar notificações.');
+        }
+    }
+
+    /**
      * Atualiza estatísticas
      */
     function updateStatistics(data) {
@@ -285,6 +313,50 @@ document.addEventListener('DOMContentLoaded', () => {
                 </td>
                 <td class="px-4 py-3 text-sm text-gray-600">
                     ${formatDate(click.clickedAt)}
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    /**
+     * Atualiza tabela de notificações
+     */
+    function updateNotificationsTable(notifications) {
+        if (notifications.length === 0) {
+            notificationsTableBody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="px-4 py-8 text-center text-gray-500">
+                        Nenhuma notificação enviada ainda
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        notificationsTableBody.innerHTML = notifications.map(notification => `
+            <tr class="border-t hover:bg-gray-50">
+                <td class="px-4 py-3 text-sm font-medium text-gray-900">
+                    ${notification.title}
+                    ${notification.isResend ? '<span class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Reenvio</span>' : ''}
+                </td>
+                <td class="px-4 py-3 text-sm text-gray-600">
+                    ${notification.body.length > 50 ? notification.body.substring(0, 50) + '...' : notification.body}
+                </td>
+                <td class="px-4 py-3 text-sm text-blue-600">
+                    ${notification.url ? `<a href="${notification.url}" target="_blank" class="hover:underline">${notification.url.length > 30 ? notification.url.substring(0, 30) + '...' : notification.url}</a>` : 'N/A'}
+                </td>
+                <td class="px-4 py-3 text-sm text-gray-600">
+                    ${formatDate(notification.sentAt)}
+                </td>
+                <td class="px-4 py-3 text-sm text-gray-600">
+                    <span class="text-green-600">${notification.sent} enviados</span>
+                    ${notification.failed > 0 ? `<br><span class="text-red-600">${notification.failed} falharam</span>` : ''}
+                </td>
+                <td class="px-4 py-3 text-sm">
+                    <button onclick="resendNotification('${notification.id}')" 
+                            class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium py-1 px-3 rounded transition-colors">
+                        Reenviar
+                    </button>
                 </td>
             </tr>
         `).join('');
@@ -388,6 +460,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 loadClickStats();
             }
 
+            // Recarrega histórico de notificações
+            loadNotifications();
+
         } catch (error) {
             console.error('Erro ao enviar notificação:', error);
             alert('Erro ao enviar notificação. Verifique o console para mais detalhes.');
@@ -396,6 +471,48 @@ document.addEventListener('DOMContentLoaded', () => {
             sendNotificationBtn.textContent = 'Enviar para Todos os Usuários';
         }
     }
+
+    /**
+     * Reenvia uma notificação
+     */
+    async function resendNotification(notificationId) {
+        if (!confirm('Tem certeza que deseja reenviar esta notificação para todos os usuários ativos?')) {
+            return;
+        }
+
+        try {
+            const response = await authenticatedFetch(`${SERVER_URL}/api/notifications/${notificationId}/resend`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`Erro: ${response.status}`);
+            }
+
+            const result = await response.json();
+            
+            alert(`Notificação reenviada! ${result.sent} sucessos, ${result.failed} falhas`);
+
+            // Recarrega dados
+            loadUsers();
+            loadNotifications();
+            
+            // Recarrega estatísticas de cliques se houve links
+            if (result.trackingIds && result.trackingIds.length > 0) {
+                loadClickStats();
+            }
+
+        } catch (error) {
+            console.error('Erro ao reenviar notificação:', error);
+            alert('Erro ao reenviar notificação. Verifique o console para mais detalhes.');
+        }
+    }
+
+    // Torna a função global para uso nos botões
+    window.resendNotification = resendNotification;
 
     /**
      * Remove usuário
@@ -497,6 +614,35 @@ document.addEventListener('DOMContentLoaded', () => {
         clicksTableBody.innerHTML = `
             <tr>
                 <td colspan="4" class="px-4 py-8 text-center text-red-500">
+                    ${message}
+                </td>
+            </tr>
+        `;
+    }
+
+    /**
+     * Mostra estado de carregamento para notificações
+     */
+    function showNotificationsLoading() {
+        notificationsTableBody.innerHTML = `
+            <tr>
+                <td colspan="6" class="px-4 py-8 text-center text-gray-500">
+                    <div class="flex items-center justify-center">
+                        <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mr-2"></div>
+                        Carregando notificações...
+                    </div>
+                </td>
+            </tr>
+        `;
+    }
+
+    /**
+     * Mostra erro para notificações
+     */
+    function showNotificationsError(message) {
+        notificationsTableBody.innerHTML = `
+            <tr>
+                <td colspan="6" class="px-4 py-8 text-center text-red-500">
                     ${message}
                 </td>
             </tr>

@@ -31,6 +31,7 @@ webpush.setVapidDetails(
 const SUBSCRIPTIONS_FILE = path.join(__dirname, 'subscriptions.json');
 const ADMINS_FILE = path.join(__dirname, 'admins.json');
 const CLICKS_FILE = path.join(__dirname, 'clicks.json');
+const NOTIFICATIONS_FILE = path.join(__dirname, 'notifications.json');
 
 // Chave secreta para JWT (em produção, use uma variável de ambiente)
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -102,6 +103,38 @@ async function saveClicks(clicks) {
  */
 function generateTrackingId() {
     return Date.now().toString(36) + Math.random().toString(36).substr(2);
+}
+
+/**
+ * Gera ID único para notificações
+ */
+function generateNotificationId() {
+    return Date.now().toString(36) + Math.random().toString(36).substr(2);
+}
+
+/**
+ * Carrega histórico de notificações
+ */
+async function loadNotifications() {
+    try {
+        const data = await fs.readFile(NOTIFICATIONS_FILE, 'utf8');
+        return JSON.parse(data);
+    } catch (error) {
+        console.log('Arquivo de notificações não encontrado, criando novo...');
+        return {};
+    }
+}
+
+/**
+ * Salva histórico de notificações
+ */
+async function saveNotifications(notifications) {
+    try {
+        await fs.writeFile(NOTIFICATIONS_FILE, JSON.stringify(notifications, null, 2));
+        console.log('Notificações salvas com sucesso');
+    } catch (error) {
+        console.error('Erro ao salvar notificações:', error);
+    }
 }
 
 /**
@@ -508,6 +541,7 @@ app.post('/api/notify-all', authenticateToken, async (req, res) => {
         let failed = 0;
         const trackingIds = [];
         const clicks = await loadClicks(); // Carrega uma vez fora do loop
+        const notificationId = generateNotificationId();
 
         // Envia notificações em paralelo
         const promises = adminUsers.map(async ([userId, userData]) => {
@@ -570,6 +604,24 @@ app.post('/api/notify-all', authenticateToken, async (req, res) => {
             await saveClicks(clicks);
         }
         
+        // Salva histórico da notificação
+        const notifications = await loadNotifications();
+        notifications[notificationId] = {
+            id: notificationId,
+            adminId: req.admin.id,
+            title: title,
+            body: body,
+            icon: icon || 'https://placehold.co/192x192/1e293b/ffffff?text=P',
+            url: url || null,
+            tag: tag || 'pulso-notification',
+            sentAt: new Date().toISOString(),
+            sent: sent,
+            failed: failed,
+            totalUsers: adminUsers.length,
+            trackingIds: trackingIds
+        };
+        await saveNotifications(notifications);
+        
         await saveSubscriptions(subscriptions);
 
         console.log(`Notificação enviada por admin ${req.admin.username} para seus usuários: ${sent} sucessos, ${failed} falhas${trackingIds.length > 0 ? ` (${trackingIds.length} links de rastreamento criados)` : ''}`);
@@ -579,13 +631,187 @@ app.post('/api/notify-all', authenticateToken, async (req, res) => {
             message: `Notificação enviada para ${sent} usuários`,
             sent: sent,
             failed: failed,
-            trackingIds: trackingIds
+            trackingIds: trackingIds,
+            notificationId: notificationId
         });
 
     } catch (error) {
         console.error('Erro no envio:', error);
         res.status(500).json({ 
             error: 'Erro ao enviar notificações' 
+        });
+    }
+});
+
+/**
+ * Endpoint para listar notificações do admin logado (protegido)
+ */
+app.get('/api/notifications', authenticateToken, async (req, res) => {
+    try {
+        const notifications = await loadNotifications();
+        
+        // Filtra apenas notificações do administrador logado
+        const adminNotifications = Object.values(notifications)
+            .filter(notification => notification.adminId === req.admin.id)
+            .sort((a, b) => new Date(b.sentAt) - new Date(a.sentAt)); // Mais recentes primeiro
+
+        res.json({
+            success: true,
+            notifications: adminNotifications
+        });
+
+    } catch (error) {
+        console.error('Erro ao listar notificações:', error);
+        res.status(500).json({ 
+            error: 'Erro ao carregar notificações' 
+        });
+    }
+});
+
+/**
+ * Endpoint para reenviar notificação (protegido)
+ */
+app.post('/api/notifications/:notificationId/resend', authenticateToken, async (req, res) => {
+    try {
+        const { notificationId } = req.params;
+        const notifications = await loadNotifications();
+        
+        const originalNotification = notifications[notificationId];
+        
+        if (!originalNotification) {
+            return res.status(404).json({ 
+                error: 'Notificação não encontrada' 
+            });
+        }
+
+        // Verifica se a notificação pertence ao admin logado
+        if (originalNotification.adminId !== req.admin.id) {
+            return res.status(403).json({ 
+                error: 'Você não tem permissão para reenviar esta notificação' 
+            });
+        }
+
+        // Reenvia usando os mesmos dados da notificação original
+        const { title, body, icon, url, tag } = originalNotification;
+        
+        const subscriptions = await loadSubscriptions();
+        
+        // Filtra apenas usuários ativos do administrador logado
+        const adminUsers = Object.entries(subscriptions)
+            .filter(([_, userData]) => userData.active && userData.adminId === req.admin.id);
+
+        if (adminUsers.length === 0) {
+            return res.json({ 
+                success: true, 
+                message: 'Nenhum usuário ativo encontrado para este administrador',
+                sent: 0,
+                failed: 0
+            });
+        }
+
+        let sent = 0;
+        let failed = 0;
+        const trackingIds = [];
+        const clicks = await loadClicks();
+        const newNotificationId = generateNotificationId();
+
+        // Envia notificações em paralelo
+        const promises = adminUsers.map(async ([userId, userData]) => {
+            try {
+                let finalUrl = url || '/';
+                let trackingId = null;
+
+                // Se uma URL foi fornecida, cria um link de rastreamento para cada usuário
+                if (url && url.trim() !== '') {
+                    trackingId = generateTrackingId();
+                    finalUrl = `${req.protocol}://${req.get('host')}/track/${trackingId}`;
+                    
+                    // Salva dados de rastreamento
+                    clicks[trackingId] = {
+                        originalUrl: url,
+                        userId: userId,
+                        adminId: req.admin.id,
+                        notificationTitle: title,
+                        createdAt: new Date().toISOString(),
+                        clicked: false,
+                        clickedAt: null
+                    };
+                    trackingIds.push(trackingId);
+                }
+
+                const notificationPayload = JSON.stringify({
+                    title,
+                    body,
+                    icon: icon,
+                    url: finalUrl,
+                    tag: tag,
+                    timestamp: Date.now()
+                });
+
+                await webpush.sendNotification(
+                    userData.subscription,
+                    notificationPayload
+                );
+
+                // Atualiza último envio
+                subscriptions[userId].lastNotificationSent = new Date().toISOString();
+                sent++;
+
+            } catch (error) {
+                console.error(`Erro ao reenviar para ${userId}:`, error);
+                failed++;
+
+                // Se a subscrição é inválida, marca como inativa
+                if (error.statusCode === 410 || error.statusCode === 404) {
+                    subscriptions[userId].active = false;
+                    console.log(`Usuário ${userId} marcado como inativo`);
+                }
+            }
+        });
+
+        await Promise.all(promises);
+        
+        // Salva todos os cliques de uma vez
+        if (trackingIds.length > 0) {
+            await saveClicks(clicks);
+        }
+        
+        // Salva histórico da nova notificação (reenvio)
+        notifications[newNotificationId] = {
+            id: newNotificationId,
+            adminId: req.admin.id,
+            title: title,
+            body: body,
+            icon: icon,
+            url: url,
+            tag: tag,
+            sentAt: new Date().toISOString(),
+            sent: sent,
+            failed: failed,
+            totalUsers: adminUsers.length,
+            trackingIds: trackingIds,
+            isResend: true,
+            originalNotificationId: notificationId
+        };
+        await saveNotifications(notifications);
+        
+        await saveSubscriptions(subscriptions);
+
+        console.log(`Notificação reenviada por admin ${req.admin.username}: ${sent} sucessos, ${failed} falhas`);
+
+        res.json({
+            success: true,
+            message: `Notificação reenviada para ${sent} usuários`,
+            sent: sent,
+            failed: failed,
+            trackingIds: trackingIds,
+            notificationId: newNotificationId
+        });
+
+    } catch (error) {
+        console.error('Erro ao reenviar notificação:', error);
+        res.status(500).json({ 
+            error: 'Erro ao reenviar notificação' 
         });
     }
 });

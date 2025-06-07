@@ -9,5 +9,36 @@
     "clickedAt": "2025-06-07T22:29:53.399Z",
     "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:139.0) Gecko/20100101 Firefox/139.0",
     "ip": "::ffff:127.0.0.1"
+  },
+  "mbmtt03mgy4p3rv9mo8": {
+    "originalUrl": "https://google.com.br\t",
+    "userId": "user_1749335334451_tp1yycmc5",
+    "adminId": "admin1",
+    "notificationTitle": "Super promoção PS5",
+    "createdAt": "2025-06-07T22:48:53.698Z",
+    "clicked": true,
+    "clickedAt": "2025-06-07T22:50:01.548Z",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:139.0) Gecko/20100101 Firefox/139.0",
+    "ip": "::ffff:127.0.0.1"
+  },
+  "mbmttuq9s4un7xjvphs": {
+    "originalUrl": "https://google.com.br\t",
+    "userId": "user_1749335334451_tp1yycmc5",
+    "adminId": "admin1",
+    "notificationTitle": "Super promoção PS5",
+    "createdAt": "2025-06-07T22:49:33.393Z",
+    "clicked": false,
+    "clickedAt": null
+  },
+  "mbmtuy7q6daanhw64t4": {
+    "originalUrl": "https://google.com.br\t",
+    "userId": "user_1749335334451_tp1yycmc5",
+    "adminId": "admin1",
+    "notificationTitle": "Super promoção PS5",
+    "createdAt": "2025-06-07T22:50:24.566Z",
+    "clicked": true,
+    "clickedAt": "2025-06-07T22:50:27.353Z",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:139.0) Gecko/20100101 Firefox/139.0",
+    "ip": "::ffff:127.0.0.1"
   }
 }
