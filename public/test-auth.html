@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Autenticação - Pulso</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <div class="max-w-2xl mx-auto">
+            <h1 class="text-3xl font-bold text-gray-800 mb-8 text-center">
+                Teste de Autenticação
+            </h1>
+
+            <!-- Seção de Login -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <h2 class="text-xl font-semibold mb-4">Login</h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Usuário
+                        </label>
+                        <input type="text" id="username" value="admin" 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Senha
+                        </label>
+                        <input type="password" id="password" value="admin123"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <button onclick="testLogin()" 
+                            class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition duration-200">
+                        Fazer Login
+                    </button>
+                </div>
+            </div>
+
+            <!-- Seção de Testes -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <h2 class="text-xl font-semibold mb-4">Testes de API</h2>
+                <div class="space-y-3">
+                    <button onclick="testValidateToken()" 
+                            class="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 transition duration-200">
+                        Validar Token
+                    </button>
+                    <button onclick="testListUsers()" 
+                            class="w-full bg-purple-600 text-white py-2 px-4 rounded-md hover:bg-purple-700 transition duration-200">
+                        Listar Usuários
+                    </button>
+                    <button onclick="testListAdmins()" 
+                            class="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 transition duration-200">
+                        Listar Administradores
+                    </button>
+                    <button onclick="clearToken()" 
+                            class="w-full bg-red-600 text-white py-2 px-4 rounded-md hover:bg-red-700 transition duration-200">
+                        Limpar Token
+                    </button>
+                </div>
+            </div>
+
+            <!-- Área de Resultados -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-semibold mb-4">Resultados</h2>
+                <div id="results" class="bg-gray-50 p-4 rounded-md min-h-32 font-mono text-sm overflow-auto">
+                    Clique em um botão para ver os resultados...
+                </div>
+            </div>
+
+            <!-- Links de Navegação -->
+            <div class="mt-8 text-center space-x-4">
+                <a href="/" class="text-blue-600 hover:text-blue-800">← Página Principal</a>
+                <a href="/login.html" class="text-blue-600 hover:text-blue-800">Login Admin</a>
+                <a href="/admin.html" class="text-blue-600 hover:text-blue-800">Painel Admin</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SERVER_URL = 'http://localhost:3000';
+        const resultsEl = document.getElementById('results');
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const color = type === 'error' ? 'text-red-600' : type === 'success' ? 'text-green-600' : 'text-blue-600';
+            resultsEl.innerHTML += `<div class="${color}">[${timestamp}] ${message}</div>`;
+            resultsEl.scrollTop = resultsEl.scrollHeight;
+        }
+
+        function clearResults() {
+            resultsEl.innerHTML = '';
+        }
+
+        async function testLogin() {
+            clearResults();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            log('Tentando fazer login...');
+
+            try {
+                const response = await fetch(`${SERVER_URL}/api/admin/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    localStorage.setItem('admin_token', data.token);
+                    log(`Login realizado com sucesso!`, 'success');
+                    log(`Token: ${data.token.substring(0, 50)}...`);
+                    log(`Admin ID: ${data.adminId}`);
+                    log(`Nome: ${data.name}`);
+                } else {
+                    log(`Erro no login: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                log(`Erro de conexão: ${error.message}`, 'error');
+            }
+        }
+
+        async function testValidateToken() {
+            clearResults();
+            const token = localStorage.getItem('admin_token');
+
+            if (!token) {
+                log('Nenhum token encontrado. Faça login primeiro.', 'error');
+                return;
+            }
+
+            log('Validando token...');
+
+            try {
+                const response = await fetch(`${SERVER_URL}/api/admin/validate`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    log('Token válido!', 'success');
+                    log(`Admin: ${JSON.stringify(data.admin, null, 2)}`);
+                } else {
+                    log(`Token inválido: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                log(`Erro de conexão: ${error.message}`, 'error');
+            }
+        }
+
+        async function testListUsers() {
+            clearResults();
+            const token = localStorage.getItem('admin_token');
+
+            if (!token) {
+                log('Nenhum token encontrado. Faça login primeiro.', 'error');
+                return;
+            }
+
+            log('Listando usuários...');
+
+            try {
+                const response = await fetch(`${SERVER_URL}/api/users`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    log(`Usuários carregados com sucesso!`, 'success');
+                    log(`Total: ${data.total}, Ativos: ${data.active}`);
+                    log(`Dados: ${JSON.stringify(data.users, null, 2)}`);
+                } else {
+                    log(`Erro ao listar usuários: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                log(`Erro de conexão: ${error.message}`, 'error');
+            }
+        }
+
+        async function testListAdmins() {
+            clearResults();
+            const token = localStorage.getItem('admin_token');
+
+            if (!token) {
+                log('Nenhum token encontrado. Faça login primeiro.', 'error');
+                return;
+            }
+
+            log('Listando administradores...');
+
+            try {
+                const response = await fetch(`${SERVER_URL}/api/admin/list`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    log(`Administradores carregados com sucesso!`, 'success');
+                    log(`Dados: ${JSON.stringify(data.admins, null, 2)}`);
+                } else {
+                    log(`Erro ao listar administradores: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                log(`Erro de conexão: ${error.message}`, 'error');
+            }
+        }
+
+        function clearToken() {
+            localStorage.removeItem('admin_token');
+            clearResults();
+            log('Token removido do localStorage', 'success');
+        }
+
+        // Verifica se já existe um token ao carregar a página
+        window.addEventListener('load', () => {
+            const token = localStorage.getItem('admin_token');
+            if (token) {
+                log(`Token encontrado: ${token.substring(0, 50)}...`);
+            } else {
+                log('Nenhum token encontrado no localStorage');
+            }
+        });
+    </script>
+</body>
+</html>

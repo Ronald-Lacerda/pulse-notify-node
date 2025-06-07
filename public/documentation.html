@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Documentação das Rotas - Pulso</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .route-card {
+            transition: all 0.3s ease;
+        }
+        .route-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+        .method-get { @apply bg-green-100 text-green-800 border-green-200; }
+        .method-post { @apply bg-blue-100 text-blue-800 border-blue-200; }
+        .method-delete { @apply bg-red-100 text-red-800 border-red-200; }
+        .method-put { @apply bg-yellow-100 text-yellow-800 border-yellow-200; }
+        .protected { @apply bg-orange-50 border-orange-200; }
+        .public { @apply bg-green-50 border-green-200; }
+    </style>
+</head>
+<body class="bg-slate-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <header class="text-center mb-12">
+            <div class="w-20 h-20 mx-auto rounded-full bg-slate-800 flex items-center justify-center mb-6">
+                <span class="text-white text-2xl font-bold">P</span>
+            </div>
+            <h1 class="text-4xl font-bold text-slate-800 mb-4">Documentação das Rotas</h1>
+            <p class="text-slate-600 text-lg max-w-2xl mx-auto">
+                Explore todas as páginas e endpoints disponíveis no sistema Pulso. 
+                Clique nos links para acessar diretamente cada rota.
+            </p>
+        </header>
+
+        <!-- Navegação Rápida -->
+        <nav class="bg-white rounded-lg shadow-sm border border-slate-200 p-6 mb-8">
+            <h2 class="text-xl font-semibold text-slate-800 mb-4">Navegação Rápida</h2>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <a href="#frontend-pages" class="text-blue-600 hover:text-blue-800 font-medium">Páginas Frontend</a>
+                <a href="#api-public" class="text-green-600 hover:text-green-800 font-medium">APIs Públicas</a>
+                <a href="#api-auth" class="text-orange-600 hover:text-orange-800 font-medium">APIs de Autenticação</a>
+                <a href="#api-protected" class="text-red-600 hover:text-red-800 font-medium">APIs Protegidas</a>
+            </div>
+        </nav>
+
+        <!-- Páginas Frontend -->
+        <section id="frontend-pages" class="mb-12">
+            <h2 class="text-2xl font-bold text-slate-800 mb-6 flex items-center">
+                <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                </svg>
+                Páginas Frontend
+            </h2>
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Login Administrativo (raiz) -->
+                <div class="route-card bg-white rounded-lg shadow-sm border border-slate-200 p-6 public">
+                    <div class="flex items-center justify-between mb-4">
+                        <span class="px-3 py-1 text-sm font-medium rounded-full bg-blue-100 text-blue-800">Página</span>
+                        <span class="text-xs text-green-600 font-medium">Público</span>
+                    </div>
+                    <h3 class="text-lg font-semibold text-slate-800 mb-2">Login Administrativo</h3>
+                    <p class="text-slate-600 text-sm mb-4">Página de login para administradores acessarem o painel de controle.</p>
+                    <div class="space-y-2">
+                        <p class="text-xs text-slate-500"><strong>Rota:</strong> /</p>
+                        <p class="text-xs text-slate-500"><strong>Credenciais padrão:</strong> admin / admin123</p>
+                        <a href="/login.html" target="_blank" class="inline-block bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-4 rounded-md transition-colors">
+                            Acessar Login
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Página de inscrição -->
+                <div class="route-card bg-white rounded-lg shadow-sm border border-slate-200 p-6 public">
+                    <div class="flex items-center justify-between mb-4">
+                        <span class="px-3 py-1 text-sm font-medium rounded-full bg-blue-100 text-blue-800">Página</span>
+                        <span class="text-xs text-green-600 font-medium">Público</span>
+                    </div>
+                    <h3 class="text-lg font-semibold text-slate-800 mb-2">Página de inscrição</h3>
+                    <p class="text-slate-600 text-sm mb-4">Página para usuários se inscreverem nas notificações push.</p>
+                    <div class="space-y-2">
+                        <p class="text-xs text-slate-500"><strong>Rota:</strong> /subscribe</p>
+                        <a href="/subscribe.html" target="_blank" class="inline-block bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-4 rounded-md transition-colors">
+                            Acessar Página
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Painel Administrativo -->
+                <div class="route-card bg-white rounded-lg shadow-sm border border-slate-200 p-6 protected">
+                    <div class="flex items-center justify-between mb-4">
+                        <span class="px-3 py-1 text-sm font-medium rounded-full bg-blue-100 text-blue-800">Página</span>
+                        <span class="text-xs text-orange-600 font-medium">Protegido</span>
+                    </div>
+                    <h3 class="text-lg font-semibold text-slate-800 mb-2">Painel Administrativo</h3>
+                    <p class="text-slate-600 text-sm mb-4">Dashboard para gerenciar usuários e enviar notificações push.</p>
+                    <div class="space-y-2">
+                        <p class="text-xs text-slate-500"><strong>Rota:</strong> /admin</p>
+                        <p class="text-xs text-slate-500"><strong>Requer:</strong> Login administrativo</p>
+                        <a href="/admin.html" target="_blank" class="inline-block bg-orange-600 hover:bg-orange-700 text-white text-sm font-medium py-2 px-4 rounded-md transition-colors">
+                            Acessar Painel
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Instruções iOS -->
+                <div class="route-card bg-white rounded-lg shadow-sm border border-slate-200 p-6 public">
+                    <div class="flex items-center justify-between mb-4">
+                        <span class="px-3 py-1 text-sm font-medium rounded-full bg-blue-100 text-blue-800">Página</span>
+                        <span class="text-xs text-green-600 font-medium">Público</span>
+                    </div>
+                    <h3 class="text-lg font-semibold text-slate-800 mb-2">Instruções iOS</h3>
+                    <p class="text-slate-600 text-sm mb-4">Guia passo a passo para ativar notificações em dispositivos iOS.</p>
+                    <div class="space-y-2">
+                        <p class="text-xs text-slate-500"><strong>Rota:</strong> /ios-instructions</p>
+                        <a href="/ios-instructions.html" target="_blank" class="inline-block bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-4 rounded-md transition-colors">
+                            Ver Instruções
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Teste de Autenticação -->
+                <div class="route-card bg-white rounded-lg shadow-sm border border-slate-200 p-6 public">
+                    <div class="flex items-center justify-between mb-4">
+                        <span class="px-3 py-1 text-sm font-medium rounded-full bg-purple-100 text-purple-800">Teste</span>
+                        <span class="text-xs text-green-600 font-medium">Público</span>
+                    </div>
+                    <h3 class="text-lg font-semibold text-slate-800 mb-2">Teste de Autenticação</h3>
+                    <p class="text-slate-600 text-sm mb-4">Página para testar funcionalidades de autenticação e APIs.</p>
+                    <div class="space-y-2">
+                        <p class="text-xs text-slate-500"><strong>Rota:</strong> /test-auth.html</p>
+                        <a href="/test-auth.html" target="_blank" class="inline-block bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium py-2 px-4 rounded-md transition-colors">
+                            Acessar Testes
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Documentação (Esta página) -->
+                <div class="route-card bg-white rounded-lg shadow-sm border border-slate-200 p-6 public border-2 border-blue-300">
+                    <div class="flex items-center justify-between mb-4">
+                        <span class="px-3 py-1 text-sm font-medium rounded-full bg-blue-100 text-blue-800">Página</span>
+                        <span class="text-xs text-blue-600 font-medium">Atual</span>
+                    </div>
+                    <h3 class="text-lg font-semibold text-slate-800 mb-2">Documentação das Rotas</h3>
+                    <p class="text-slate-600 text-sm mb-4">Esta página - documentação completa de todas as rotas do sistema.</p>
+                    <div class="space-y-2">
+                        <p class="text-xs text-slate-500"><strong>Rota:</strong> /documentation</p>
+                        <span class="inline-block bg-blue-100 text-blue-800 text-sm font-medium py-2 px-4 rounded-md">
+                            Página Atual
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- APIs Públicas -->
+        <section id="api-public" class="mb-12">
+            <h2 class="text-2xl font-bold text-slate-800 mb-6 flex items-center">
+                <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                </svg>
+                APIs Públicas
+            </h2>
+            <div class="grid md:grid-cols-2 gap-6">
+                <!-- VAPID Public Key -->
+                <div class="route-card bg-white rounded-lg shadow-sm border border-slate-200 p-6 public">
+                    <div class="flex items-center justify-between mb-4">
+                        <span class="px-3 py-1 text-sm font-medium rounded-full method-get">GET</span>
+                        <span class="text-xs text-green-600 font-medium">Público</span>
+                    </div>
+                    <h3 class="text-lg font-semibold text-slate-800 mb-2">Chave Pública VAPID</h3>
+                    <p class="text-slate-600 text-sm mb-4">Retorna a chave pública VAPID necessária para configurar notificações push.</p>
+                    <div class="space-y-2">
+                        <p class="text-xs text-slate-500"><strong>Endpoint:</strong> /api/vapid-public-key</p>
+                        <p class="text-xs text-slate-500"><strong>Resposta:</strong> JSON com publicKey</p>
+                        <button onclick="testEndpoint('/api/vapid-public-key', 'GET')" class="bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-2 px-4 rounded-md transition-colors">
+                            Testar API
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Subscribe -->
+                <div class="route-card bg-white rounded-lg shadow-sm border border-slate-200 p-6 public">
+                    <div class="flex items-center justify-between mb-4">
+                        <span class="px-3 py-1 text-sm font-medium rounded-full method-post">POST</span>
+                        <span class="text-xs text-green-600 font-medium">Público</span>
+                    </div>
+                    <h3 class="text-lg font-semibold text-slate-800 mb-2">Registrar Subscrição</h3>
+                    <p class="text-slate-600 text-sm mb-4">Registra uma nova subscrição de notificação push para um usuário.</p>
+                    <div class="space-y-2">
+                        <p class="text-xs text-slate-500"><strong>Endpoint:</strong> /api/subscribe</p>
+                        <p class="text-xs text-slate-500"><strong>Parâmetros:</strong> userId, subscription, userAgent, etc.</p>
+                        <button onclick="showApiDetails('subscribe')" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-4 rounded-md transition-colors">
+                            Ver Detalhes
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- APIs de Autenticação -->
+        <section id="api-auth" class="mb-12">
+            <h2 class="text-2xl font-bold text-slate-800 mb-6 flex items-center">
+                <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                </svg>
+                APIs de Autenticação
+            </h2>
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Login -->
+                <div class="route-card bg-white rounded-lg shadow-sm border border-slate-200 p-6 public">
+                    <div class="flex items-center justify-between mb-4">
+                        <span class="px-3 py-1 text-sm font-medium rounded-full method-post">POST</span>
+                        <span class="text-xs text-green-600 font-medium">Público</span>
+                    </div>
+                    <h3 class="text-lg font-semibold text-slate-800 mb-2">Login Admin</h3>
+                    <p class="text-slate-600 text-sm mb-4">Autentica um administrador e retorna token JWT.</p>
+                    <div class="space-y-2">
+                        <p class="text-xs text-slate-500"><strong>Endpoint:</strong> /api/admin/login</p>
+                        <p class="text-xs text-slate-500"><strong>Parâmetros:</strong> username, password</p>
+                        <button onclick="showApiDetails('login')" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-4 rounded-md transition-colors">
+                            Ver Detalhes
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Validate Token -->
+                <div class="route-card bg-white rounded-lg shadow-sm border border-slate-200 p-6 protected">
+                    <div class="flex items-center justify-between mb-4">
+                        <span class="px-3 py-1 text-sm font-medium rounded-full method-post">POST</span>
+                        <span class="text-xs text-orange-600 font-medium">Protegido</span>
+                    </div>
+                    <h3 class="text-lg font-semibold text-slate-800 mb-2">Validar Token</h3>
+                    <p class="text-slate-600 text-sm mb-4">Valida um token JWT e retorna informações do admin.</p>
+                    <div class="space-y-2">
+                        <p class="text-xs text-slate-500"><strong>Endpoint:</strong> /api/admin/validate</p>
+                        <p class="text-xs text-slate-500"><strong>Header:</strong> Authorization: Bearer {token}</p>
+                        <button onclick="testProtectedEndpoint('/api/admin/validate', 'POST')" class="bg-orange-600 hover:bg-orange-700 text-white text-sm font-medium py-2 px-4 rounded-md transition-colors">
+                            Testar API
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Create Admin -->
+                <div class="route-card bg-white rounded-lg shadow-sm border border-slate-200 p-6 protected">
+                    <div class="flex items-center justify-between mb-4">
+                        <span class="px-3 py-1 text-sm font-medium rounded-full method-post">POST</span>
+                        <span class="text-xs text-orange-600 font-medium">Protegido</span>
+                    </div>
+                    <h3 class="text-lg font-semibold text-slate-800 mb-2">Criar Admin</h3>
+                    <p class="text-slate-600 text-sm mb-4">Cria um novo administrador (requer autenticação).</p>
+                    <div class="space-y-2">
+                        <p class="text-xs text-slate-500"><strong>Endpoint:</strong> /api/admin/create</p>
+                        <p class="text-xs text-slate-500"><strong>Parâmetros:</strong> username, password, name</p>
+                        <button onclick="showApiDetails('createAdmin')" class="bg-orange-600 hover:bg-orange-700 text-white text-sm font-medium py-2 px-4 rounded-md transition-colors">
+                            Ver Detalhes
+                        </button>
+                    </div>
+                </div>
+
+                <!-- List Admins -->
+                <div class="route-card bg-white rounded-lg shadow-sm border border-slate-200 p-6 protected">
+                    <div class="flex items-center justify-between mb-4">
+                        <span class="px-3 py-1 text-sm font-medium rounded-full method-get">GET</span>
+                        <span class="text-xs text-orange-600 font-medium">Protegido</span>
+                    </div>
+                    <h3 class="text-lg font-semibold text-slate-800 mb-2">Listar Admins</h3>
+                    <p class="text-slate-600 text-sm mb-4">Lista todos os administradores cadastrados.</p>
+                    <div class="space-y-2">
+                        <p class="text-xs text-slate-500"><strong>Endpoint:</strong> /api/admin/list</p>
+                        <p class="text-xs text-slate-500"><strong>Resposta:</strong> Lista de admins (sem senhas)</p>
+                        <button onclick="testProtectedEndpoint('/api/admin/list', 'GET')" class="bg-orange-600 hover:bg-orange-700 text-white text-sm font-medium py-2 px-4 rounded-md transition-colors">
+                            Testar API
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- APIs Protegidas -->
+        <section id="api-protected" class="mb-12">
+            <h2 class="text-2xl font-bold text-slate-800 mb-6 flex items-center">
+                <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                </svg>
+                APIs Protegidas (Requerem Autenticação)
+            </h2>
+            <div class="grid md:grid-cols-2 gap-6">
+                <!-- List Users -->
+                <div class="route-card bg-white rounded-lg shadow-sm border border-slate-200 p-6 protected">
+                    <div class="flex items-center justify-between mb-4">
+                        <span class="px-3 py-1 text-sm font-medium rounded-full method-get">GET</span>
+                        <span class="text-xs text-red-600 font-medium">Protegido</span>
+                    </div>
+                    <h3 class="text-lg font-semibold text-slate-800 mb-2">Listar Usuários</h3>
+                    <p class="text-slate-600 text-sm mb-4">Lista todos os usuários inscritos nas notificações.</p>
+                    <div class="space-y-2">
+                        <p class="text-xs text-slate-500"><strong>Endpoint:</strong> /api/users</p>
+                        <p class="text-xs text-slate-500"><strong>Resposta:</strong> Lista de usuários com estatísticas</p>
+                        <button onclick="testProtectedEndpoint('/api/users', 'GET')" class="bg-red-600 hover:bg-red-700 text-white text-sm font-medium py-2 px-4 rounded-md transition-colors">
+                            Testar API
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Delete User -->
+                <div class="route-card bg-white rounded-lg shadow-sm border border-slate-200 p-6 protected">
+                    <div class="flex items-center justify-between mb-4">
+                        <span class="px-3 py-1 text-sm font-medium rounded-full method-delete">DELETE</span>
+                        <span class="text-xs text-red-600 font-medium">Protegido</span>
+                    </div>
+                    <h3 class="text-lg font-semibold text-slate-800 mb-2">Remover Usuário</h3>
+                    <p class="text-slate-600 text-sm mb-4">Remove um usuário específico das subscrições.</p>
+                    <div class="space-y-2">
+                        <p class="text-xs text-slate-500"><strong>Endpoint:</strong> /api/users/:userId</p>
+                        <p class="text-xs text-slate-500"><strong>Parâmetro:</strong> userId na URL</p>
+                        <button onclick="showApiDetails('deleteUser')" class="bg-red-600 hover:bg-red-700 text-white text-sm font-medium py-2 px-4 rounded-md transition-colors">
+                            Ver Detalhes
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Notify User -->
+                <div class="route-card bg-white rounded-lg shadow-sm border border-slate-200 p-6 protected">
+                    <div class="flex items-center justify-between mb-4">
+                        <span class="px-3 py-1 text-sm font-medium rounded-full method-post">POST</span>
+                        <span class="text-xs text-red-600 font-medium">Protegido</span>
+                    </div>
+                    <h3 class="text-lg font-semibold text-slate-800 mb-2">Notificar Usuário</h3>
+                    <p class="text-slate-600 text-sm mb-4">Envia notificação push para um usuário específico.</p>
+                    <div class="space-y-2">
+                        <p class="text-xs text-slate-500"><strong>Endpoint:</strong> /api/notify/:userId</p>
+                        <p class="text-xs text-slate-500"><strong>Parâmetros:</strong> title, body, icon, url, tag</p>
+                        <button onclick="showApiDetails('notifyUser')" class="bg-red-600 hover:bg-red-700 text-white text-sm font-medium py-2 px-4 rounded-md transition-colors">
+                            Ver Detalhes
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Notify All -->
+                <div class="route-card bg-white rounded-lg shadow-sm border border-slate-200 p-6 protected">
+                    <div class="flex items-center justify-between mb-4">
+                        <span class="px-3 py-1 text-sm font-medium rounded-full method-post">POST</span>
+                        <span class="text-xs text-red-600 font-medium">Protegido</span>
+                    </div>
+                    <h3 class="text-lg font-semibold text-slate-800 mb-2">Notificar Todos</h3>
+                    <p class="text-slate-600 text-sm mb-4">Envia notificação push para todos os usuários ativos.</p>
+                    <div class="space-y-2">
+                        <p class="text-xs text-slate-500"><strong>Endpoint:</strong> /api/notify-all</p>
+                        <p class="text-xs text-slate-500"><strong>Parâmetros:</strong> title, body, icon, url, tag</p>
+                        <button onclick="showApiDetails('notifyAll')" class="bg-red-600 hover:bg-red-700 text-white text-sm font-medium py-2 px-4 rounded-md transition-colors">
+                            Ver Detalhes
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Informações Adicionais -->
+        <section class="mb-12">
+            <h2 class="text-2xl font-bold text-slate-800 mb-6">Informações Adicionais</h2>
+            <div class="grid md:grid-cols-2 gap-6">
+                <!-- Arquivos Estáticos -->
+                <div class="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+                    <h3 class="text-lg font-semibold text-slate-800 mb-4">Arquivos Estáticos</h3>
+                    <ul class="space-y-2 text-sm text-slate-600">
+                        <li><strong>/manifest.json</strong> - Manifesto PWA</li>
+                        <li><strong>/sw.js</strong> - Service Worker</li>
+                        <li><strong>/style.css</strong> - Estilos personalizados</li>
+                        <li><strong>/script.js</strong> - JavaScript principal</li>
+                        <li><strong>/admin.js</strong> - JavaScript do painel admin</li>
+                        <li><strong>/login.js</strong> - JavaScript do login</li>
+                    </ul>
+                </div>
+
+                <!-- Credenciais Padrão -->
+                <div class="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+                    <h3 class="text-lg font-semibold text-slate-800 mb-4">Credenciais Padrão</h3>
+                    <div class="space-y-3 text-sm">
+                        <div class="bg-slate-50 p-3 rounded-md">
+                            <p class="font-medium text-slate-800">Administrador Principal</p>
+                            <p class="text-slate-600">Usuário: <code class="bg-slate-200 px-1 rounded">admin</code></p>
+                            <p class="text-slate-600">Senha: <code class="bg-slate-200 px-1 rounded">admin123</code></p>
+                        </div>
+                        <p class="text-xs text-slate-500">
+                            ⚠️ Altere essas credenciais em produção!
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="text-center text-slate-500 text-sm">
+            <p>Sistema Pulso - Documentação das Rotas</p>
+            <p class="mt-2">Desenvolvido para gerenciamento de notificações push</p>
+        </footer>
+    </div>
+
+    <!-- Modal para detalhes da API -->
+    <div id="apiModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 id="modalTitle" class="text-xl font-semibold text-slate-800"></h3>
+                    <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+                <div id="modalContent" class="space-y-4"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Função para testar endpoints públicos
+        async function testEndpoint(endpoint, method = 'GET', body = null) {
+            try {
+                const options = {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                };
+                
+                if (body) {
+                    options.body = JSON.stringify(body);
+                }
+
+                const response = await fetch(endpoint, options);
+                const data = await response.json();
+                
+                alert(`Resposta da API ${endpoint}:\n\n${JSON.stringify(data, null, 2)}`);
+            } catch (error) {
+                alert(`Erro ao testar ${endpoint}:\n\n${error.message}`);
+            }
+        }
+
+        // Função para testar endpoints protegidos
+        async function testProtectedEndpoint(endpoint, method = 'GET', body = null) {
+            const token = localStorage.getItem('adminToken');
+            
+            if (!token) {
+                alert('Token de autenticação não encontrado. Faça login primeiro em /login.html');
+                return;
+            }
+
+            try {
+                const options = {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    }
+                };
+                
+                if (body) {
+                    options.body = JSON.stringify(body);
+                }
+
+                const response = await fetch(endpoint, options);
+                const data = await response.json();
+                
+                alert(`Resposta da API ${endpoint}:\n\n${JSON.stringify(data, null, 2)}`);
+            } catch (error) {
+                alert(`Erro ao testar ${endpoint}:\n\n${error.message}`);
+            }
+        }
+
+        // Função para mostrar detalhes da API
+        function showApiDetails(apiType) {
+            const modal = document.getElementById('apiModal');
+            const title = document.getElementById('modalTitle');
+            const content = document.getElementById('modalContent');
+            
+            const apiDetails = {
+                subscribe: {
+                    title: 'API de Subscrição - POST /api/subscribe',
+                    content: `
+                        <div class="space-y-4">
+                            <div>
+                                <h4 class="font-semibold text-slate-800 mb-2">Descrição</h4>
+                                <p class="text-slate-600">Registra uma nova subscrição de notificação push para um usuário.</p>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-slate-800 mb-2">Parâmetros (JSON)</h4>
+                                <pre class="bg-slate-100 p-3 rounded text-sm overflow-x-auto"><code>{
+  "userId": "string (obrigatório)",
+  "subscription": "object (obrigatório)",
+  "adminId": "string (opcional)",
+  "userAgent": "string (opcional)",
+  "timestamp": "string (opcional)",
+  "url": "string (opcional)",
+  "language": "string (opcional)",
+  "platform": "string (opcional)",
+  "timezone": "string (opcional)"
+}</code></pre>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-slate-800 mb-2">Resposta de Sucesso</h4>
+                                <pre class="bg-slate-100 p-3 rounded text-sm overflow-x-auto"><code>{
+  "success": true,
+  "message": "Subscrição registrada com sucesso",
+  "userId": "user123",
+  "adminId": "admin1"
+}</code></pre>
+                            </div>
+                        </div>
+                    `
+                },
+                login: {
+                    title: 'API de Login - POST /api/admin/login',
+                    content: `
+                        <div class="space-y-4">
+                            <div>
+                                <h4 class="font-semibold text-slate-800 mb-2">Descrição</h4>
+                                <p class="text-slate-600">Autentica um administrador e retorna um token JWT.</p>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-slate-800 mb-2">Parâmetros (JSON)</h4>
+                                <pre class="bg-slate-100 p-3 rounded text-sm overflow-x-auto"><code>{
+  "username": "admin",
+  "password": "admin123"
+}</code></pre>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-slate-800 mb-2">Resposta de Sucesso</h4>
+                                <pre class="bg-slate-100 p-3 rounded text-sm overflow-x-auto"><code>{
+  "success": true,
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "adminId": "admin1",
+  "username": "admin",
+  "name": "Administrador Principal"
+}</code></pre>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-slate-800 mb-2">Como usar o token</h4>
+                                <p class="text-slate-600 mb-2">Inclua o token no header Authorization:</p>
+                                <pre class="bg-slate-100 p-3 rounded text-sm overflow-x-auto"><code>Authorization: Bearer {token}</code></pre>
+                            </div>
+                        </div>
+                    `
+                },
+                createAdmin: {
+                    title: 'API Criar Admin - POST /api/admin/create',
+                    content: `
+                        <div class="space-y-4">
+                            <div>
+                                <h4 class="font-semibold text-slate-800 mb-2">Descrição</h4>
+                                <p class="text-slate-600">Cria um novo administrador. Requer autenticação.</p>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-slate-800 mb-2">Headers</h4>
+                                <pre class="bg-slate-100 p-3 rounded text-sm overflow-x-auto"><code>Authorization: Bearer {token}
+Content-Type: application/json</code></pre>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-slate-800 mb-2">Parâmetros (JSON)</h4>
+                                <pre class="bg-slate-100 p-3 rounded text-sm overflow-x-auto"><code>{
+  "username": "novo_admin",
+  "password": "senha_segura",
+  "name": "Nome do Administrador"
+}</code></pre>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-slate-800 mb-2">Resposta de Sucesso</h4>
+                                <pre class="bg-slate-100 p-3 rounded text-sm overflow-x-auto"><code>{
+  "success": true,
+  "message": "Administrador criado com sucesso",
+  "adminId": "admin_1234567890_abc123"
+}</code></pre>
+                            </div>
+                        </div>
+                    `
+                },
+                deleteUser: {
+                    title: 'API Remover Usuário - DELETE /api/users/:userId',
+                    content: `
+                        <div class="space-y-4">
+                            <div>
+                                <h4 class="font-semibold text-slate-800 mb-2">Descrição</h4>
+                                <p class="text-slate-600">Remove um usuário específico das subscrições. Requer autenticação.</p>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-slate-800 mb-2">Headers</h4>
+                                <pre class="bg-slate-100 p-3 rounded text-sm overflow-x-auto"><code>Authorization: Bearer {token}</code></pre>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-slate-800 mb-2">URL</h4>
+                                <pre class="bg-slate-100 p-3 rounded text-sm overflow-x-auto"><code>DELETE /api/users/user123</code></pre>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-slate-800 mb-2">Resposta de Sucesso</h4>
+                                <pre class="bg-slate-100 p-3 rounded text-sm overflow-x-auto"><code>{
+  "success": true,
+  "message": "Usuário removido com sucesso"
+}</code></pre>
+                            </div>
+                        </div>
+                    `
+                },
+                notifyUser: {
+                    title: 'API Notificar Usuário - POST /api/notify/:userId',
+                    content: `
+                        <div class="space-y-4">
+                            <div>
+                                <h4 class="font-semibold text-slate-800 mb-2">Descrição</h4>
+                                <p class="text-slate-600">Envia notificação push para um usuário específico. Requer autenticação.</p>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-slate-800 mb-2">Headers</h4>
+                                <pre class="bg-slate-100 p-3 rounded text-sm overflow-x-auto"><code>Authorization: Bearer {token}
+Content-Type: application/json</code></pre>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-slate-800 mb-2">URL</h4>
+                                <pre class="bg-slate-100 p-3 rounded text-sm overflow-x-auto"><code>POST /api/notify/user123</code></pre>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-slate-800 mb-2">Parâmetros (JSON)</h4>
+                                <pre class="bg-slate-100 p-3 rounded text-sm overflow-x-auto"><code>{
+  "title": "Título da Notificação",
+  "body": "Corpo da mensagem",
+  "icon": "https://exemplo.com/icon.png (opcional)",
+  "url": "https://exemplo.com (opcional)",
+  "tag": "tag-personalizada (opcional)"
+}</code></pre>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-slate-800 mb-2">Resposta de Sucesso</h4>
+                                <pre class="bg-slate-100 p-3 rounded text-sm overflow-x-auto"><code>{
+  "success": true,
+  "message": "Notificação enviada com sucesso"
+}</code></pre>
+                            </div>
+                        </div>
+                    `
+                },
+                notifyAll: {
+                    title: 'API Notificar Todos - POST /api/notify-all',
+                    content: `
+                        <div class="space-y-4">
+                            <div>
+                                <h4 class="font-semibold text-slate-800 mb-2">Descrição</h4>
+                                <p class="text-slate-600">Envia notificação push para todos os usuários ativos. Requer autenticação.</p>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-slate-800 mb-2">Headers</h4>
+                                <pre class="bg-slate-100 p-3 rounded text-sm overflow-x-auto"><code>Authorization: Bearer {token}
+Content-Type: application/json</code></pre>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-slate-800 mb-2">Parâmetros (JSON)</h4>
+                                <pre class="bg-slate-100 p-3 rounded text-sm overflow-x-auto"><code>{
+  "title": "Título da Notificação",
+  "body": "Corpo da mensagem",
+  "icon": "https://exemplo.com/icon.png (opcional)",
+  "url": "https://exemplo.com (opcional)",
+  "tag": "tag-personalizada (opcional)"
+}</code></pre>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-slate-800 mb-2">Resposta de Sucesso</h4>
+                                <pre class="bg-slate-100 p-3 rounded text-sm overflow-x-auto"><code>{
+  "success": true,
+  "message": "Notificação enviada para 5 usuários",
+  "sent": 5,
+  "failed": 0
+}</code></pre>
+                            </div>
+                        </div>
+                    `
+                }
+            };
+            
+            const details = apiDetails[apiType];
+            if (details) {
+                title.textContent = details.title;
+                content.innerHTML = details.content;
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            }
+        }
+
+        // Função para fechar modal
+        function closeModal() {
+            const modal = document.getElementById('apiModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        // Fechar modal clicando fora
+        document.getElementById('apiModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+
+        // Smooth scroll para navegação
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>
