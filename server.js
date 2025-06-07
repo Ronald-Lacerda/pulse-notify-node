@@ -406,23 +406,27 @@ app.get('/api/admin/list', authenticateToken, async (req, res) => {
 // ==================== ROTAS PROTEGIDAS ====================
 
 /**
- * Endpoint para listar usuários (protegido)
+ * Endpoint para listar usuários do admin logado (protegido)
  */
 app.get('/api/users', authenticateToken, async (req, res) => {
     try {
         const subscriptions = await loadSubscriptions();
-        const users = Object.entries(subscriptions).map(([userId, userData]) => ({
-            userId,
-            ...userData
-        }));
+        
+        // Filtra apenas usuários do administrador logado
+        const adminUsers = Object.entries(subscriptions)
+            .filter(([_, userData]) => userData.adminId === req.admin.id)
+            .map(([userId, userData]) => ({
+                userId,
+                ...userData
+            }));
 
-        const activeUsers = users.filter(user => user.active);
+        const activeUsers = adminUsers.filter(user => user.active);
 
         res.json({
             success: true,
-            total: users.length,
+            total: adminUsers.length,
             active: activeUsers.length,
-            users: users
+            users: adminUsers
         });
 
     } catch (error) {
@@ -434,7 +438,7 @@ app.get('/api/users', authenticateToken, async (req, res) => {
 });
 
 /**
- * Endpoint para remover usuário (protegido)
+ * Endpoint para remover usuário do admin logado (protegido)
  */
 app.delete('/api/users/:userId', authenticateToken, async (req, res) => {
     try {
@@ -444,6 +448,13 @@ app.delete('/api/users/:userId', authenticateToken, async (req, res) => {
         if (!subscriptions[userId]) {
             return res.status(404).json({ 
                 error: 'Usuário não encontrado' 
+            });
+        }
+
+        // Verifica se o usuário pertence ao admin logado
+        if (subscriptions[userId].adminId !== req.admin.id) {
+            return res.status(403).json({ 
+                error: 'Você não tem permissão para remover este usuário' 
             });
         }
 
@@ -466,97 +477,7 @@ app.delete('/api/users/:userId', authenticateToken, async (req, res) => {
 });
 
 /**
- * Endpoint para enviar notificação para usuário específico (protegido)
- */
-app.post('/api/notify/:userId', authenticateToken, async (req, res) => {
-    try {
-        const { userId } = req.params;
-        const { title, body, icon, url, tag } = req.body;
-
-        if (!title || !body) {
-            return res.status(400).json({ 
-                error: 'title e body são obrigatórios' 
-            });
-        }
-
-        const subscriptions = await loadSubscriptions();
-        const userSubscription = subscriptions[userId];
-
-        if (!userSubscription || !userSubscription.active) {
-            return res.status(404).json({ 
-                error: 'Usuário não encontrado ou inativo' 
-            });
-        }
-
-        let finalUrl = url || '/';
-        let trackingId = null;
-
-        // Se uma URL foi fornecida, cria um link de rastreamento
-        if (url && url.trim() !== '') {
-            trackingId = generateTrackingId();
-            finalUrl = `${req.protocol}://${req.get('host')}/track/${trackingId}`;
-            
-            // Salva dados de rastreamento
-            const clicks = await loadClicks();
-            clicks[trackingId] = {
-                originalUrl: url,
-                userId: userId,
-                adminId: req.admin.id,
-                notificationTitle: title,
-                createdAt: new Date().toISOString(),
-                clicked: false,
-                clickedAt: null
-            };
-            await saveClicks(clicks);
-        }
-
-        const notificationPayload = JSON.stringify({
-            title,
-            body,
-            icon: icon || 'https://placehold.co/192x192/1e293b/ffffff?text=P',
-            url: finalUrl,
-            tag: tag || 'pulso-notification',
-            timestamp: Date.now()
-        });
-
-        await webpush.sendNotification(
-            userSubscription.subscription,
-            notificationPayload
-        );
-
-        // Atualiza último envio
-        subscriptions[userId].lastNotificationSent = new Date().toISOString();
-        await saveSubscriptions(subscriptions);
-
-        console.log(`Notificação enviada para usuário ${userId} por admin ${req.admin.username}${trackingId ? ` (tracking: ${trackingId})` : ''}`);
-
-        res.json({ 
-            success: true, 
-            message: 'Notificação enviada com sucesso',
-            trackingId: trackingId
-        });
-
-    } catch (error) {
-        console.error('Erro ao enviar notificação:', error);
-        
-        // Se a subscrição é inválida, marca como inativa
-        if (error.statusCode === 410 || error.statusCode === 404) {
-            const subscriptions = await loadSubscriptions();
-            if (subscriptions[req.params.userId]) {
-                subscriptions[req.params.userId].active = false;
-                await saveSubscriptions(subscriptions);
-                console.log(`Usuário ${req.params.userId} marcado como inativo`);
-            }
-        }
-
-        res.status(500).json({ 
-            error: 'Erro ao enviar notificação' 
-        });
-    }
-});
-
-/**
- * Endpoint para enviar notificação para todos os usuários (protegido)
+ * Endpoint para enviar notificação para todos os usuários do admin (protegido)
  */
 app.post('/api/notify-all', authenticateToken, async (req, res) => {
     try {
@@ -569,13 +490,15 @@ app.post('/api/notify-all', authenticateToken, async (req, res) => {
         }
 
         const subscriptions = await loadSubscriptions();
-        const activeUsers = Object.entries(subscriptions)
-            .filter(([_, userData]) => userData.active);
+        
+        // Filtra apenas usuários ativos do administrador logado
+        const adminUsers = Object.entries(subscriptions)
+            .filter(([_, userData]) => userData.active && userData.adminId === req.admin.id);
 
-        if (activeUsers.length === 0) {
+        if (adminUsers.length === 0) {
             return res.json({ 
                 success: true, 
-                message: 'Nenhum usuário ativo encontrado',
+                message: 'Nenhum usuário ativo encontrado para este administrador',
                 sent: 0,
                 failed: 0
             });
@@ -587,7 +510,7 @@ app.post('/api/notify-all', authenticateToken, async (req, res) => {
         const clicks = await loadClicks(); // Carrega uma vez fora do loop
 
         // Envia notificações em paralelo
-        const promises = activeUsers.map(async ([userId, userData]) => {
+        const promises = adminUsers.map(async ([userId, userData]) => {
             try {
                 let finalUrl = url || '/';
                 let trackingId = null;
@@ -649,7 +572,7 @@ app.post('/api/notify-all', authenticateToken, async (req, res) => {
         
         await saveSubscriptions(subscriptions);
 
-        console.log(`Broadcast enviado por admin ${req.admin.username}: ${sent} sucessos, ${failed} falhas${trackingIds.length > 0 ? ` (${trackingIds.length} links de rastreamento criados)` : ''}`);
+        console.log(`Notificação enviada por admin ${req.admin.username} para seus usuários: ${sent} sucessos, ${failed} falhas${trackingIds.length > 0 ? ` (${trackingIds.length} links de rastreamento criados)` : ''}`);
 
         res.json({
             success: true,
@@ -660,7 +583,7 @@ app.post('/api/notify-all', authenticateToken, async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Erro no broadcast:', error);
+        console.error('Erro no envio:', error);
         res.status(500).json({ 
             error: 'Erro ao enviar notificações' 
         });

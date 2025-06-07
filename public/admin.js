@@ -5,9 +5,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const totalUsersEl = document.getElementById('total-users');
     const usersTableBody = document.getElementById('users-table-body');
     const notificationForm = document.getElementById('notification-form');
-    const sendTypeSelect = document.getElementById('send-type');
-    const userSelectContainer = document.getElementById('user-select-container');
-    const specificUserSelect = document.getElementById('specific-user');
     const refreshUsersBtn = document.getElementById('refresh-users-btn');
     const sendNotificationBtn = document.getElementById('send-notification-btn');
     const adminNameEl = document.getElementById('admin-name');
@@ -65,7 +62,6 @@ document.addEventListener('DOMContentLoaded', () => {
     checkAuthentication();
 
     // Event Listeners
-    sendTypeSelect.addEventListener('change', toggleUserSelect);
     notificationForm.addEventListener('submit', handleSendNotification);
     refreshUsersBtn.addEventListener('click', loadUsers);
     confirmCancel.addEventListener('click', hideConfirmModal);
@@ -213,7 +209,6 @@ document.addEventListener('DOMContentLoaded', () => {
             
             updateStatistics(data);
             updateUsersTable(data.users);
-            updateUserSelect(data.users);
             
         } catch (error) {
             console.error('Erro ao carregar usuários:', error);
@@ -350,31 +345,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
-     * Atualiza select de usuários específicos
-     */
-    function updateUserSelect(users) {
-        const activeUsers = users.filter(user => user.active);
-        
-        specificUserSelect.innerHTML = '<option value="">Selecione um usuário</option>' +
-            activeUsers.map(user => `
-                <option value="${user.userId}">
-                    ${user.userId} (${user.platform || 'N/A'})
-                </option>
-            `).join('');
-    }
-
-    /**
-     * Mostra/esconde select de usuário específico
-     */
-    function toggleUserSelect() {
-        if (sendTypeSelect.value === 'specific') {
-            userSelectContainer.classList.remove('hidden');
-        } else {
-            userSelectContainer.classList.add('hidden');
-        }
-    }
-
-    /**
      * Manipula envio de notificação
      */
     async function handleSendNotification(e) {
@@ -383,27 +353,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const title = document.getElementById('notification-title').value;
         const body = document.getElementById('notification-body').value;
         const url = document.getElementById('notification-url').value;
-        const sendType = sendTypeSelect.value;
-        const specificUser = specificUserSelect.value;
-
-        if (sendType === 'specific' && !specificUser) {
-            alert('Selecione um usuário específico');
-            return;
-        }
 
         try {
             sendNotificationBtn.disabled = true;
             sendNotificationBtn.textContent = 'Enviando...';
 
-            let endpoint, payload;
-            
-            if (sendType === 'all') {
-                endpoint = `${SERVER_URL}/api/notify-all`;
-                payload = { title, body, url };
-            } else {
-                endpoint = `${SERVER_URL}/api/notify/${specificUser}`;
-                payload = { title, body, url };
-            }
+            const endpoint = `${SERVER_URL}/api/notify-all`;
+            const payload = { title, body, url };
 
             const response = await authenticatedFetch(endpoint, {
                 method: 'POST',
@@ -419,15 +375,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const result = await response.json();
             
-            if (sendType === 'all') {
-                alert(`Notificação enviada! ${result.sent} sucessos, ${result.failed} falhas`);
-            } else {
-                alert('Notificação enviada com sucesso!');
-            }
+            alert(`Notificação enviada! ${result.sent} sucessos, ${result.failed} falhas`);
 
             // Limpa formulário
             notificationForm.reset();
-            toggleUserSelect();
             
             // Recarrega usuários para atualizar estatísticas
             loadUsers();
@@ -442,7 +393,7 @@ document.addEventListener('DOMContentLoaded', () => {
             alert('Erro ao enviar notificação. Verifique o console para mais detalhes.');
         } finally {
             sendNotificationBtn.disabled = false;
-            sendNotificationBtn.textContent = 'Enviar Notificação';
+            sendNotificationBtn.textContent = 'Enviar para Todos os Usuários';
         }
     }
 
