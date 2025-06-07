@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Receber Novidades - Pulso</title>
+    <meta name="theme-color" content="#ffffff"/>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Manifesto da PWA (essencial para iOS) -->
+    <link rel="manifest" href="manifest.json">
+
+    <!-- CSS Personalizado -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-slate-100 flex justify-center items-center min-h-screen p-4">
+
+    <div id="subscription-card" class="text-center w-full max-w-md mx-auto">
+        <div id="initial-state" class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
+            <header class="mb-6 fade-in-up" style="animation-delay: 0.1s;">
+                <img id="business-logo" src="https://placehold.co/120x120/f1f5f9/1e293b?text=Sua+Logo&font=roboto" 
+                     alt="Logo do Estabelecimento"
+                     class="w-24 h-24 mx-auto rounded-full bg-slate-100">
+            </header>
+            <main>
+                <h1 class="text-3xl font-medium text-slate-800 fade-in-up" style="animation-delay: 0.2s;">
+                    Fique por dentro de tudo!
+                </h1>
+                <p class="text-slate-600 mt-3 mb-8 text-base fade-in-up" style="animation-delay: 0.3s;">
+                    Clique abaixo para ativar as notificações e não perca nenhuma promoção, novidade ou evento exclusivo.
+                </p>
+                <button id="subscribe-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-full text-lg shadow-sm hover:shadow-md transition-all">
+                    Ativar Notificações
+                </button>
+                <p class="text-slate-500 text-xs mt-4 fade-in-up" style="animation-delay: 0.5s;">
+                    Você pode cancelar a qualquer momento.
+                </p>
+            </main>
+        </div>
+        <div id="final-state" class="hidden bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
+             <div id="final-state-icon" class="w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-5"></div>
+             <h2 id="final-state-title" class="text-2xl font-medium text-slate-800"></h2>
+             <p id="final-state-message" class="text-slate-600 mt-2 text-base"></p>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script src="script.js"></script>
+</body>
+</html>
