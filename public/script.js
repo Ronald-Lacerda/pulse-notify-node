@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const serviceWorkerPath = 'sw.js';
 
     // Configuração do servidor (ajuste conforme necessário)
-    const SERVER_URL = 'http://localhost:3000'; // ou sua URL do servidor
+    const SERVER_URL = process.env.SERVER_URL; // ou sua URL do servidor
     let VAPID_PUBLIC_KEY = null; // Será carregada do servidor
 
     // Detecta se é um dispositivo iOS

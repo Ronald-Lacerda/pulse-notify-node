@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const SERVER_URL = 'http://localhost:3000';
+    const SERVER_URL =  window.location.origin;
 
     const loginForm = document.getElementById('login-form');
     const usernameInput = document.getElementById('username');

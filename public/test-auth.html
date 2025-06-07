@@ -79,7 +79,7 @@
     </div>
 
     <script>
-        const SERVER_URL = 'http://localhost:3000';
+        const SERVER_URL = window.location.origin; // This will use the current domain
         const resultsEl = document.getElementById('results');
 
         function log(message, type = 'info') {

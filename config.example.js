@@ -4,10 +4,8 @@
 
 module.exports = {
     // URL do servidor (ajuste conforme necessário)
-    SERVER_URL: process.env.NODE_ENV === 'production' 
-        ? 'https://seu-dominio.com' 
-        : 'http://localhost:3000',
-    
+    SERVER_URL: process.env.SERVER_URL,
+
     // Configurações de notificação
     notification: {
         icon: 'https://placehold.co/192x192/1e293b/ffffff?text=P',
@@ -15,12 +13,12 @@ module.exports = {
         defaultTag: 'pulso-notification',
         requireInteraction: false
     },
-    
+
     // Configurações de usuário
     user: {
         // Prefixo para IDs de usuário
         idPrefix: 'user_',
-        
+
         // Campos adicionais para coletar
         collectFields: [
             'userAgent',

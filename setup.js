@@ -58,9 +58,6 @@ NODE_ENV=development
 VAPID_PUBLIC_KEY=${publicKey}
 VAPID_PRIVATE_KEY=${privateKey}
 VAPID_EMAIL=seu-email@exemplo.com
-
-# Configurações de banco (opcional)
-# DATABASE_URL=mongodb://localhost:27017/pulso-notifications
 `;
         
         await fs.writeFile('.env', envContent);
@@ -85,10 +82,8 @@ VAPID_EMAIL=seu-email@exemplo.com
 
 module.exports = {
     // URL do servidor (ajuste conforme necessário)
-    SERVER_URL: process.env.NODE_ENV === 'production' 
-        ? 'https://seu-dominio.com' 
-        : 'http://localhost:3000',
-    
+    SERVER_URL: process.env.SERVER_URL,
+
     // Configurações de notificação
     notification: {
         icon: 'https://placehold.co/192x192/1e293b/ffffff?text=P',

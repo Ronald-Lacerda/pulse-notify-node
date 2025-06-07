@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const SERVER_URL = 'http://localhost:3000';
+    const SERVER_URL = window.location.origin;
 
     // Elementos do DOM
     const totalUsersEl = document.getElementById('total-users');
@@ -121,7 +121,7 @@ document.addEventListener('DOMContentLoaded', () => {
             adminNameEl.textContent = adminData.name || adminData.username;
 
             // Gera o link compartilhável
-            const shareableLink = `${window.location.origin}/?admin=${adminData.id}`;
+            const shareableLink = `${window.location.origin}/subscribe/?admin=${adminData.id}`;
             shareableLinkEl.value = shareableLink;
         }
     }
@@ -167,7 +167,7 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     async function authenticatedFetch(url, options = {}) {
         const token = localStorage.getItem('admin_token');
-        
+
         const authOptions = {
             ...options,
             headers: {
@@ -177,12 +177,12 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         const response = await fetch(url, authOptions);
-        
+
         if (response.status === 401) {
             redirectToLogin();
             throw new Error('Não autorizado');
         }
-        
+
         return response;
     }
     /**
@@ -191,12 +191,12 @@ document.addEventListener('DOMContentLoaded', () => {
     async function loadUsers() {
         try {
             showLoading();
-            
+
             // Carrega lista de admins primeiro
             await loadAdminsList();
-            
+
             const response = await authenticatedFetch(`${SERVER_URL}/api/users`);
-            
+
             if (!response.ok) {
                 throw new Error(`Erro: ${response.status}`);
             }

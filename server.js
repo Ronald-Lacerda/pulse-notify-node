@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const webpush = require('web-push');
@@ -5,9 +6,8 @@ const fs = require('fs').promises;
 const path = require('path');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
-
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT;
 
 // Middleware
 app.use(cors());
@@ -17,12 +17,12 @@ app.use(express.static('public'));
 // Configuração VAPID (você precisa gerar essas chaves)
 // Execute: npx web-push generate-vapid-keys
 const VAPID_KEYS = {
-    publicKey: 'BHML4DfCbKNJUyXWlQOnEMMZpfqhJZ5OX5GfUFAFFGr1WlbAUAmuAet5poRcrlbNTMZuZfhCTOdLdnjhplihfAg',
-    privateKey: '3az9ARKMDUYFlaD42R9shL0LA4kAJN71fhY_VqaCVjU'
+    publicKey: process.env.VAPID_PUBLIC_KEY,
+    privateKey: process.env.VAPID_PRIVATE_KEY
 };
 
 webpush.setVapidDetails(
-    'mailto:ronald.hobo17@gmail.com', // Seu email
+    'mailto:' + process.env.VAPID_EMAIL,
     VAPID_KEYS.publicKey,
     VAPID_KEYS.privateKey
 );
@@ -32,7 +32,7 @@ const SUBSCRIPTIONS_FILE = path.join(__dirname, 'subscriptions.json');
 const ADMINS_FILE = path.join(__dirname, 'admins.json');
 
 // Chave secreta para JWT (em produção, use uma variável de ambiente)
-const JWT_SECRET = process.env.JWT_SECRET || 'sua_chave_secreta_super_segura_aqui_123456';
+const JWT_SECRET = process.env.JWT_SECRET;
 
 /**
  * Carrega administradores do arquivo
