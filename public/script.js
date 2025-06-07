@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const finalStateIcon = document.getElementById('final-state-icon');
     const finalStateTitle = document.getElementById('final-state-title');
     const finalStateMessage = document.getElementById('final-state-message');
-    const serviceWorkerPath = 'sw.js';
+    const serviceWorkerPath = '/sw.js';
 
     // Configuração do servidor (ajuste conforme necessário)
     const SERVER_URL = window.location.origin;
