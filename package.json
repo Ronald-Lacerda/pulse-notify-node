@@ -1,0 +1,19 @@
+{
+  "name": "service-worker-app",
+  "version": "1.0.0",
+  "description": "Simple Node.js app with service worker",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "keywords": ["service-worker", "node", "express"],
+  "author": "",
+  "license": "MIT"
+}
