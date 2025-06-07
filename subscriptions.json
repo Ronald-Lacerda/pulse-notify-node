@@ -1,0 +1,23 @@
+{
+  "user_1749335334451_tp1yycmc5": {
+    "subscription": {
+      "endpoint": "https://updates.push.services.mozilla.com/wpush/v2/gAAAAABoRL1IcejK86hQxYdXMBdrZoUMgcmb025dKch-mjsYdKIcij76-SlReF23rgMmDBylWY9rxqXC1UlfwEtntT-IDCD0-jPhgvVcFI6YMuo3YSxMWw4G8wo_EJD960P67qgPB7Cy8qxGS7jGGTFZZOxtw-KkpI9Y5gke8H5kfxBKfCXC3MM",
+      "expirationTime": null,
+      "keys": {
+        "auth": "0YolxJ8ZjqIZMbIHt805PA",
+        "p256dh": "BKHodLkpmOALoezU8-t6HdXI-2fSxgahCvqRPJlRvXAxOPGyN7cy-ux0h-zB4zAOKbaP4xj2qspUDeIDLtyRtwU"
+      }
+    },
+    "adminId": "admin1",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:139.0) Gecko/20100101 Firefox/139.0",
+    "timestamp": "2025-06-07T22:29:28.942Z",
+    "url": "http://localhost:3000/subscribe/?admin=admin1",
+    "language": "pt-BR",
+    "platform": "MacIntel",
+    "timezone": "America/Sao_Paulo",
+    "registeredAt": "2025-06-07T22:29:28.969Z",
+    "lastSeen": "2025-06-07T22:29:28.969Z",
+    "active": true,
+    "lastNotificationSent": "2025-06-07T22:29:51.955Z"
+  }
+}

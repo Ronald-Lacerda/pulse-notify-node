@@ -30,6 +30,7 @@ webpush.setVapidDetails(
 // Arquivo para armazenar subscrições (em produção, use um banco de dados)
 const SUBSCRIPTIONS_FILE = path.join(__dirname, 'subscriptions.json');
 const ADMINS_FILE = path.join(__dirname, 'admins.json');
+const CLICKS_FILE = path.join(__dirname, 'clicks.json');
 
 // Chave secreta para JWT (em produção, use uma variável de ambiente)
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -69,6 +70,38 @@ async function saveAdmins(admins) {
     } catch (error) {
         console.error('Erro ao salvar administradores:', error);
     }
+}
+
+/**
+ * Carrega cliques do arquivo
+ */
+async function loadClicks() {
+    try {
+        const data = await fs.readFile(CLICKS_FILE, 'utf8');
+        return JSON.parse(data);
+    } catch (error) {
+        console.log('Arquivo de cliques não encontrado, criando novo...');
+        return {};
+    }
+}
+
+/**
+ * Salva cliques no arquivo
+ */
+async function saveClicks(clicks) {
+    try {
+        await fs.writeFile(CLICKS_FILE, JSON.stringify(clicks, null, 2));
+        console.log('Cliques salvos com sucesso');
+    } catch (error) {
+        console.error('Erro ao salvar cliques:', error);
+    }
+}
+
+/**
+ * Gera ID único para rastreamento
+ */
+function generateTrackingId() {
+    return Date.now().toString(36) + Math.random().toString(36).substr(2);
 }
 
 /**
@@ -455,11 +488,33 @@ app.post('/api/notify/:userId', authenticateToken, async (req, res) => {
             });
         }
 
+        let finalUrl = url || '/';
+        let trackingId = null;
+
+        // Se uma URL foi fornecida, cria um link de rastreamento
+        if (url && url.trim() !== '') {
+            trackingId = generateTrackingId();
+            finalUrl = `${req.protocol}://${req.get('host')}/track/${trackingId}`;
+            
+            // Salva dados de rastreamento
+            const clicks = await loadClicks();
+            clicks[trackingId] = {
+                originalUrl: url,
+                userId: userId,
+                adminId: req.admin.id,
+                notificationTitle: title,
+                createdAt: new Date().toISOString(),
+                clicked: false,
+                clickedAt: null
+            };
+            await saveClicks(clicks);
+        }
+
         const notificationPayload = JSON.stringify({
             title,
             body,
             icon: icon || 'https://placehold.co/192x192/1e293b/ffffff?text=P',
-            url: url || '/',
+            url: finalUrl,
             tag: tag || 'pulso-notification',
             timestamp: Date.now()
         });
@@ -473,11 +528,12 @@ app.post('/api/notify/:userId', authenticateToken, async (req, res) => {
         subscriptions[userId].lastNotificationSent = new Date().toISOString();
         await saveSubscriptions(subscriptions);
 
-        console.log(`Notificação enviada para usuário ${userId} por admin ${req.admin.username}`);
+        console.log(`Notificação enviada para usuário ${userId} por admin ${req.admin.username}${trackingId ? ` (tracking: ${trackingId})` : ''}`);
 
         res.json({ 
             success: true, 
-            message: 'Notificação enviada com sucesso' 
+            message: 'Notificação enviada com sucesso',
+            trackingId: trackingId
         });
 
     } catch (error) {
@@ -525,21 +581,44 @@ app.post('/api/notify-all', authenticateToken, async (req, res) => {
             });
         }
 
-        const notificationPayload = JSON.stringify({
-            title,
-            body,
-            icon: icon || 'https://placehold.co/192x192/1e293b/ffffff?text=P',
-            url: url || '/',
-            tag: tag || 'pulso-notification',
-            timestamp: Date.now()
-        });
-
         let sent = 0;
         let failed = 0;
+        const trackingIds = [];
+        const clicks = await loadClicks(); // Carrega uma vez fora do loop
 
         // Envia notificações em paralelo
         const promises = activeUsers.map(async ([userId, userData]) => {
             try {
+                let finalUrl = url || '/';
+                let trackingId = null;
+
+                // Se uma URL foi fornecida, cria um link de rastreamento para cada usuário
+                if (url && url.trim() !== '') {
+                    trackingId = generateTrackingId();
+                    finalUrl = `${req.protocol}://${req.get('host')}/track/${trackingId}`;
+                    
+                    // Salva dados de rastreamento
+                    clicks[trackingId] = {
+                        originalUrl: url,
+                        userId: userId,
+                        adminId: req.admin.id,
+                        notificationTitle: title,
+                        createdAt: new Date().toISOString(),
+                        clicked: false,
+                        clickedAt: null
+                    };
+                    trackingIds.push(trackingId);
+                }
+
+                const notificationPayload = JSON.stringify({
+                    title,
+                    body,
+                    icon: icon || 'https://placehold.co/192x192/1e293b/ffffff?text=P',
+                    url: finalUrl,
+                    tag: tag || 'pulso-notification',
+                    timestamp: Date.now()
+                });
+
                 await webpush.sendNotification(
                     userData.subscription,
                     notificationPayload
@@ -562,21 +641,168 @@ app.post('/api/notify-all', authenticateToken, async (req, res) => {
         });
 
         await Promise.all(promises);
+        
+        // Salva todos os cliques de uma vez
+        if (trackingIds.length > 0) {
+            await saveClicks(clicks);
+        }
+        
         await saveSubscriptions(subscriptions);
 
-        console.log(`Broadcast enviado por admin ${req.admin.username}: ${sent} sucessos, ${failed} falhas`);
+        console.log(`Broadcast enviado por admin ${req.admin.username}: ${sent} sucessos, ${failed} falhas${trackingIds.length > 0 ? ` (${trackingIds.length} links de rastreamento criados)` : ''}`);
 
         res.json({
             success: true,
             message: `Notificação enviada para ${sent} usuários`,
             sent: sent,
-            failed: failed
+            failed: failed,
+            trackingIds: trackingIds
         });
 
     } catch (error) {
         console.error('Erro no broadcast:', error);
         res.status(500).json({ 
             error: 'Erro ao enviar notificações' 
+        });
+    }
+});
+
+/**
+ * Endpoint para rastreamento de cliques
+ */
+app.get('/track/:trackingId', async (req, res) => {
+    try {
+        const { trackingId } = req.params;
+        const clicks = await loadClicks();
+        const clickData = clicks[trackingId];
+
+        if (!clickData) {
+            return res.status(404).send(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Link não encontrado</title>
+                    <meta charset="UTF-8">
+                </head>
+                <body>
+                    <h1>Link não encontrado</h1>
+                    <p>Este link de rastreamento não existe ou expirou.</p>
+                </body>
+                </html>
+            `);
+        }
+
+        // Registra o clique
+        if (!clickData.clicked) {
+            clickData.clicked = true;
+            clickData.clickedAt = new Date().toISOString();
+            clickData.userAgent = req.get('User-Agent');
+            clickData.ip = req.ip || req.connection.remoteAddress;
+            await saveClicks(clicks);
+            
+            console.log(`Clique registrado: ${trackingId} -> ${clickData.originalUrl} (usuário: ${clickData.userId})`);
+        }
+
+        // Página de redirecionamento imperceptível
+        res.send(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Redirecionando...</title>
+                <meta charset="UTF-8">
+                <meta http-equiv="refresh" content="0;url=${clickData.originalUrl}">
+                <style>
+                    body {
+                        font-family: Arial, sans-serif;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        height: 100vh;
+                        margin: 0;
+                        background-color: #f5f5f5;
+                    }
+                    .loading {
+                        text-align: center;
+                    }
+                    .spinner {
+                        border: 4px solid #f3f3f3;
+                        border-top: 4px solid #3498db;
+                        border-radius: 50%;
+                        width: 40px;
+                        height: 40px;
+                        animation: spin 1s linear infinite;
+                        margin: 0 auto 20px;
+                    }
+                    @keyframes spin {
+                        0% { transform: rotate(0deg); }
+                        100% { transform: rotate(360deg); }
+                    }
+                </style>
+                <script>
+                    // Redirecionamento via JavaScript como fallback
+                    setTimeout(function() {
+                        window.location.href = '${clickData.originalUrl}';
+                    }, 100);
+                </script>
+            </head>
+            <body>
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Redirecionando...</p>
+                </div>
+            </body>
+            </html>
+        `);
+
+    } catch (error) {
+        console.error('Erro no rastreamento:', error);
+        res.status(500).send(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Erro</title>
+                <meta charset="UTF-8">
+            </head>
+            <body>
+                <h1>Erro interno</h1>
+                <p>Ocorreu um erro ao processar o redirecionamento.</p>
+            </body>
+            </html>
+        `);
+    }
+});
+
+/**
+ * Endpoint para obter estatísticas de cliques (protegido)
+ */
+app.get('/api/clicks/stats', authenticateToken, async (req, res) => {
+    try {
+        const clicks = await loadClicks();
+        const adminId = req.admin.id;
+        
+        // Filtra cliques do admin atual
+        const adminClicks = Object.values(clicks).filter(click => click.adminId === adminId);
+        
+        const stats = {
+            total: adminClicks.length,
+            clicked: adminClicks.filter(click => click.clicked).length,
+            clickRate: adminClicks.length > 0 ? 
+                ((adminClicks.filter(click => click.clicked).length / adminClicks.length) * 100).toFixed(2) : 0,
+            recentClicks: adminClicks
+                .filter(click => click.clicked)
+                .sort((a, b) => new Date(b.clickedAt) - new Date(a.clickedAt))
+                .slice(0, 10)
+        };
+
+        res.json({
+            success: true,
+            stats: stats
+        });
+
+    } catch (error) {
+        console.error('Erro ao obter estatísticas:', error);
+        res.status(500).json({ 
+            error: 'Erro ao obter estatísticas' 
         });
     }
 });

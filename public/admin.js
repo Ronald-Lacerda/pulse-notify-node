@@ -15,6 +15,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const shareableLinkEl = document.getElementById('shareable-link');
     const copyLinkBtn = document.getElementById('copy-link-btn');
 
+    // Elementos de estatísticas de cliques
+    const totalLinksEl = document.getElementById('total-links');
+    const totalClicksEl = document.getElementById('total-clicks');
+    const clickRateEl = document.getElementById('click-rate');
+    const clicksTableBody = document.getElementById('clicks-table-body');
+    const refreshStatsBtn = document.getElementById('refresh-stats-btn');
+
     // Modal
     const confirmModal = document.getElementById('confirm-modal');
     const confirmMessage = document.getElementById('confirm-message');
@@ -64,6 +71,7 @@ document.addEventListener('DOMContentLoaded', () => {
     confirmCancel.addEventListener('click', hideConfirmModal);
     logoutBtn.addEventListener('click', handleLogout);
     copyLinkBtn.addEventListener('click', copyShareableLink);
+    refreshStatsBtn.addEventListener('click', loadClickStats);
 
     /**
      * Verifica autenticação do usuário
@@ -91,6 +99,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 adminData = data.admin;
                 setupAdminInterface();
                 loadUsers();
+                loadClickStats();
             } else {
                 redirectToLogin();
             }
@@ -213,10 +222,77 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
+     * Carrega estatísticas de cliques
+     */
+    async function loadClickStats() {
+        try {
+            showClickStatsLoading();
+
+            const response = await authenticatedFetch(`${SERVER_URL}/api/clicks/stats`);
+
+            if (!response.ok) {
+                throw new Error(`Erro: ${response.status}`);
+            }
+
+            const data = await response.json();
+            updateClickStats(data.stats);
+            
+        } catch (error) {
+            console.error('Erro ao carregar estatísticas de cliques:', error);
+            showClickStatsError('Erro ao carregar estatísticas de cliques.');
+        }
+    }
+
+    /**
      * Atualiza estatísticas
      */
     function updateStatistics(data) {
         totalUsersEl.textContent = data.total;
+    }
+
+    /**
+     * Atualiza estatísticas de cliques
+     */
+    function updateClickStats(stats) {
+        totalLinksEl.textContent = stats.total;
+        totalClicksEl.textContent = stats.clicked;
+        clickRateEl.textContent = stats.clickRate + '%';
+        updateClicksTable(stats.recentClicks);
+    }
+
+    /**
+     * Atualiza tabela de cliques recentes
+     */
+    function updateClicksTable(recentClicks) {
+        if (recentClicks.length === 0) {
+            clicksTableBody.innerHTML = `
+                <tr>
+                    <td colspan="4" class="px-4 py-8 text-center text-gray-500">
+                        Nenhum clique registrado ainda
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        clicksTableBody.innerHTML = recentClicks.map(click => `
+            <tr class="border-t hover:bg-gray-50">
+                <td class="px-4 py-3 text-sm font-mono text-gray-800">
+                    ${click.userId}
+                </td>
+                <td class="px-4 py-3 text-sm text-gray-600">
+                    ${click.notificationTitle}
+                </td>
+                <td class="px-4 py-3 text-sm text-blue-600">
+                    <a href="${click.originalUrl}" target="_blank" class="hover:underline">
+                        ${click.originalUrl.length > 50 ? click.originalUrl.substring(0, 50) + '...' : click.originalUrl}
+                    </a>
+                </td>
+                <td class="px-4 py-3 text-sm text-gray-600">
+                    ${formatDate(click.clickedAt)}
+                </td>
+            </tr>
+        `).join('');
     }
 
     /**
@@ -355,6 +431,11 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Recarrega usuários para atualizar estatísticas
             loadUsers();
+            
+            // Recarrega estatísticas de cliques se uma URL foi fornecida
+            if (url && url.trim() !== '') {
+                loadClickStats();
+            }
 
         } catch (error) {
             console.error('Erro ao enviar notificação:', error);
@@ -430,12 +511,41 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
+     * Mostra estado de carregamento para estatísticas de cliques
+     */
+    function showClickStatsLoading() {
+        clicksTableBody.innerHTML = `
+            <tr>
+                <td colspan="4" class="px-4 py-8 text-center text-gray-500">
+                    <div class="flex items-center justify-center">
+                        <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mr-2"></div>
+                        Carregando estatísticas...
+                    </div>
+                </td>
+            </tr>
+        `;
+    }
+
+    /**
      * Mostra erro
      */
     function showError(message) {
         usersTableBody.innerHTML = `
             <tr>
                 <td colspan="8" class="px-4 py-8 text-center text-red-500">
+                    ${message}
+                </td>
+            </tr>
+        `;
+    }
+
+    /**
+     * Mostra erro para estatísticas de cliques
+     */
+    function showClickStatsError(message) {
+        clicksTableBody.innerHTML = `
+            <tr>
+                <td colspan="4" class="px-4 py-8 text-center text-red-500">
                     ${message}
                 </td>
             </tr>
