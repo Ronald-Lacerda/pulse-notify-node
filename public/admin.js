@@ -3,6 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Elementos do DOM
     const totalUsersEl = document.getElementById('total-users');
+    const newUsers24hEl = document.getElementById('new-users-24h');
     const usersTableBody = document.getElementById('users-table-body');
     const notificationForm = document.getElementById('notification-form');
     const refreshUsersBtn = document.getElementById('refresh-users-btn');
@@ -15,7 +16,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Elementos de estatísticas de cliques
     const totalLinksEl = document.getElementById('total-links');
     const totalClicksEl = document.getElementById('total-clicks');
-    const clickRateEl = document.getElementById('click-rate');
     const clicksTableBody = document.getElementById('clicks-table-body');
     const refreshStatsBtn = document.getElementById('refresh-stats-btn');
 
@@ -271,6 +271,7 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     function updateStatistics(data) {
         totalUsersEl.textContent = data.total;
+        newUsers24hEl.textContent = data.newUsers24h;
     }
 
     /**
@@ -279,7 +280,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateClickStats(stats) {
         totalLinksEl.textContent = stats.total;
         totalClicksEl.textContent = stats.clicked;
-        clickRateEl.textContent = stats.clickRate + '%';
         updateClicksTable(stats.recentClicks);
     }
 

@@ -454,11 +454,22 @@ app.get('/api/users', authenticateToken, async (req, res) => {
             }));
 
         const activeUsers = adminUsers.filter(user => user.active);
+        
+        // Calcula usuários novos nas últimas 24 horas
+        const now = new Date();
+        const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        
+        const newUsers24h = adminUsers.filter(user => {
+            if (!user.registeredAt) return false;
+            const registeredDate = new Date(user.registeredAt);
+            return registeredDate >= twentyFourHoursAgo;
+        });
 
         res.json({
             success: true,
             total: adminUsers.length,
             active: activeUsers.length,
+            newUsers24h: newUsers24h.length,
             users: adminUsers
         });
 
