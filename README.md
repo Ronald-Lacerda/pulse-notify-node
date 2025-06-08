@@ -1,233 +1,210 @@
-# Sistema de Notificações Push - Pulso
+# Pulso Notify - Sistema de Notificações Push com MongoDB
 
-Um sistema completo de notificações push com autenticação de administradores e links compartilháveis.
+Sistema completo de notificações push web com painel administrativo e persistência em MongoDB.
 
 ## 🚀 Funcionalidades
 
-### Para Usuários
-- **Subscrição Simples**: Registro automático de notificações push
-- **Links Compartilháveis**: Cada admin possui um link único para captar usuários
-- **Multiplataforma**: Funciona em desktop e mobile
-- **Offline Ready**: Service Worker para funcionamento offline
-
-### Para Administradores
-- **Autenticação Segura**: Sistema de login com JWT
-- **Painel de Controle**: Interface completa para gerenciar usuários e notificações
-- **Links Personalizados**: Cada admin tem um link único para compartilhar
-- **Gestão de Usuários**: Visualizar, filtrar e remover usuários
-- **Envio de Notificações**: Individual ou broadcast para todos os usuários
-- **Rastreamento**: Acompanhar qual admin captou cada usuário
+- ✅ Notificações push web
+- ✅ Painel administrativo completo
+- ✅ Múltiplos administradores
+- ✅ Rastreamento de cliques
+- ✅ Estatísticas detalhadas
+- ✅ Persistência em MongoDB
+- ✅ Autenticação JWT
+- ✅ Interface responsiva
 
 ## 📋 Pré-requisitos
 
-- Node.js (versão 14 ou superior)
-- NPM ou Yarn
+- Node.js (versão 16 ou superior)
+- MongoDB (local ou remoto)
+- Navegador com suporte a Service Workers
 
 ## 🛠️ Instalação
 
-1. **Clone o repositório**
+1. **Clone o repositório:**
 ```bash
 git clone <url-do-repositorio>
-cd projeto-pulso
+cd pulso-notify
 ```
 
-2. **Instale as dependências**
+2. **Instale as dependências:**
 ```bash
 npm install
 ```
 
-3. **Configure as chaves VAPID**
+3. **Configure o MongoDB:**
+
+   **Opção A - MongoDB Local:**
+   - Instale o MongoDB em sua máquina
+   - Inicie o serviço MongoDB
+   - O sistema conectará automaticamente em `mongodb://localhost:27017/pulso-notify`
+
+   **Opção B - MongoDB Remoto (MongoDB Atlas):**
+   - Crie uma conta no MongoDB Atlas
+   - Crie um cluster e obtenha a string de conexão
+   - Defina a variável de ambiente:
+   ```bash
+   export MONGODB_URI="mongodb+srv://usuario:senha@cluster.mongodb.net/pulso-notify"
+   ```
+
+4. **Configure as chaves VAPID (opcional):**
 ```bash
-npx web-push generate-vapid-keys
+# Se você quiser usar suas próprias chaves VAPID
+export VAPID_PUBLIC_KEY="sua-chave-publica"
+export VAPID_PRIVATE_KEY="sua-chave-privada"
+export VAPID_EMAIL="seu-email@exemplo.com"
 ```
 
-4. **Atualize as chaves no arquivo `server.js`**
-```javascript
-const VAPID_KEYS = {
-    publicKey: 'SUA_CHAVE_PUBLICA_AQUI',
-    privateKey: 'SUA_CHAVE_PRIVADA_AQUI'
-};
+5. **Execute a migração (se você tem dados em JSON):**
+```bash
+npm run migrate
 ```
 
-5. **Inicie o servidor**
+6. **Inicie o servidor:**
 ```bash
+# Desenvolvimento
+npm run dev
+
+# Produção
 npm start
 ```
 
-6. **Acesse o sistema**
-- Página principal: http://localhost:3000
-- Login admin: http://localhost:3000/login.html
-- Painel admin: http://localhost:3000/admin.html
-- Teste de autenticação: http://localhost:3000/test-auth.html
-- **📚 Documentação das Rotas: http://localhost:3000/documentation.html**
+## 🗄️ Migração de Dados
 
-## 📚 Documentação Interativa
+Se você já possui dados em arquivos JSON do sistema anterior, execute o script de migração:
 
-O sistema inclui uma página de documentação completa acessível em:
-- http://localhost:3000/documentation.html
-- http://localhost:3000/docs
-- http://localhost:3000/documentation
-
-### Funcionalidades da Documentação:
-- **Visualização de todas as rotas**: Frontend e APIs organizadas por categoria
-- **Testes integrados**: Teste APIs diretamente da interface
-- **Exemplos de código**: Payloads e respostas para cada endpoint
-- **Navegação intuitiva**: Links diretos para cada página do sistema
-- **Informações de autenticação**: Detalhes sobre tokens e proteção de rotas
-
-## 👤 Administrador Padrão
-
-O sistema cria automaticamente um administrador padrão:
-- **Usuário**: `admin`
-- **Senha**: `admin123`
-
-⚠️ **IMPORTANTE**: Altere essas credenciais em produção!
-
-## 🔐 Sistema de Autenticação
-
-### Login de Administrador
-- Endpoint: `POST /api/admin/login`
-- Retorna: Token JWT válido por 24 horas
-- Credenciais são verificadas com bcrypt
-
-### Proteção de Rotas
-Todas as rotas administrativas requerem autenticação:
-- `GET /api/users` - Listar usuários
-- `POST /api/notify/:userId` - Enviar notificação individual
-- `POST /api/notify-all` - Enviar broadcast
-- `DELETE /api/users/:userId` - Remover usuário
-- `GET /api/admin/list` - Listar administradores
-- `POST /api/admin/create` - Criar novo administrador
-
-## 🔗 Links Compartilháveis
-
-Cada administrador possui um link único no formato:
-```
-http://localhost:3000/?admin=ADMIN_ID
+```bash
+npm run migrate
 ```
 
-Quando um usuário acessa este link e se registra, ele fica associado ao administrador correspondente.
+Este script irá:
+- Conectar ao MongoDB
+- Ler os arquivos JSON existentes (admins.json, subscriptions.json, notifications.json, clicks.json)
+- Migrar todos os dados para o MongoDB
+- Manter a compatibilidade com os dados existentes
 
-## 📊 Estrutura de Dados
-
-### Usuários (subscriptions.json)
-```json
-{
-  "user_123": {
-    "subscription": { /* dados da subscrição push */ },
-    "adminId": "admin1",
-    "userAgent": "Mozilla/5.0...",
-    "platform": "desktop",
-    "language": "pt-BR",
-    "timezone": "America/Sao_Paulo",
-    "registeredAt": "2024-01-01T10:00:00.000Z",
-    "lastSeen": "2024-01-01T10:00:00.000Z",
-    "lastNotificationSent": "2024-01-01T11:00:00.000Z",
-    "active": true
-  }
-}
-```
-
-### Administradores (admins.json)
-```json
-{
-  "admin1": {
-    "id": "admin1",
-    "username": "admin",
-    "password": "$2b$10$...", // hash bcrypt
-    "name": "Administrador Principal",
-    "createdAt": "2024-01-01T10:00:00.000Z",
-    "active": true
-  }
-}
-```
-
-## 🌐 API Endpoints
-
-### Públicos
-- `GET /api/vapid-public-key` - Chave pública VAPID
-- `POST /api/subscribe` - Registrar subscrição
-- `POST /api/admin/login` - Login de administrador
-
-### Autenticados (requerem Bearer token)
-- `POST /api/admin/validate` - Validar token
-- `GET /api/admin/list` - Listar administradores
-- `POST /api/admin/create` - Criar administrador
-- `GET /api/users` - Listar usuários
-- `DELETE /api/users/:userId` - Remover usuário
-- `POST /api/notify/:userId` - Notificação individual
-- `POST /api/notify-all` - Broadcast
-
-## 🔧 Configuração Avançada
+## 🔧 Configuração
 
 ### Variáveis de Ambiente
+
+| Variável | Descrição | Padrão |
+|----------|-----------|---------|
+| `PORT` | Porta do servidor | `3000` |
+| `MONGODB_URI` | String de conexão MongoDB | `mongodb://localhost:27017/pulso-notify` |
+| `JWT_SECRET` | Chave secreta para JWT | Gerada automaticamente |
+| `VAPID_PUBLIC_KEY` | Chave pública VAPID | Gerada automaticamente |
+| `VAPID_PRIVATE_KEY` | Chave privada VAPID | Gerada automaticamente |
+| `VAPID_EMAIL` | Email para VAPID | `mailto:admin@exemplo.com` |
+
+### Estrutura do Banco de Dados
+
+O sistema utiliza as seguintes coleções no MongoDB:
+
+- **admins**: Administradores do sistema
+- **subscriptions**: Inscrições de usuários
+- **notifications**: Histórico de notificações enviadas
+- **clicks**: Rastreamento de cliques em links
+
+## 🚀 Uso
+
+### Acesso ao Sistema
+
+1. **Página Principal:** `http://localhost:3000`
+2. **Painel Admin:** `http://localhost:3000/admin`
+3. **Documentação:** `http://localhost:3000/documentation`
+
+### Credenciais Padrão
+
+- **Usuário:** `admin`
+- **Senha:** `admin123`
+
+### API Endpoints
+
+#### Públicos
+- `GET /api/vapid-public-key` - Chave pública VAPID
+- `POST /api/subscribe` - Registrar inscrição
+
+#### Autenticação
+- `POST /api/admin/login` - Login de administrador
+- `POST /api/admin/validate` - Validar token
+- `POST /api/admin/create` - Criar administrador
+- `GET /api/admin/list` - Listar administradores
+
+#### Protegidos (requerem autenticação)
+- `GET /api/users` - Listar usuários
+- `DELETE /api/users/:userId` - Remover usuário
+- `POST /api/notify-all` - Enviar notificação para todos
+- `GET /api/notifications` - Listar notificações
+- `POST /api/notifications/:id/resend` - Reenviar notificação
+- `GET /api/clicks/stats` - Estatísticas de cliques
+
+## 📊 Funcionalidades Avançadas
+
+### Rastreamento de Cliques
+- Links em notificações são automaticamente rastreados
+- Estatísticas detalhadas de taxa de cliques
+- Histórico completo de interações
+
+### Múltiplos Administradores
+- Cada admin vê apenas seus próprios usuários
+- Isolamento completo de dados entre admins
+- Controle de acesso baseado em JWT
+
+### Estatísticas em Tempo Real
+- Total de usuários ativos
+- Novos usuários nas últimas 24h
+- Taxa de cliques por notificação
+- Histórico completo de envios
+
+## 🔒 Segurança
+
+- Autenticação JWT com expiração
+- Senhas criptografadas com bcrypt
+- Isolamento de dados entre administradores
+- Validação de entrada em todos os endpoints
+
+## 🐛 Solução de Problemas
+
+### MongoDB não conecta
 ```bash
-PORT=3000
-JWT_SECRET=sua_chave_secreta_super_segura
+# Verifique se o MongoDB está rodando
+sudo systemctl status mongod
+
+# Ou inicie o serviço
+sudo systemctl start mongod
 ```
 
-### Personalização
-- **Ícones**: Substitua os ícones em `public/icons/`
-- **Cores**: Modifique as classes Tailwind nos arquivos HTML
-- **Textos**: Edite os textos diretamente nos arquivos
+### Erro de permissões
+```bash
+# Certifique-se de que o usuário tem permissões no diretório
+chmod -R 755 .
+```
 
-## 📱 Como Usar
-
-### Para Administradores
-
-1. **Acesse o login**: http://localhost:3000/login.html
-2. **Faça login** com suas credenciais
-3. **Copie seu link compartilhável** do painel
-4. **Compartilhe o link** com seus usuários
-5. **Gerencie usuários** e envie notificações pelo painel
-
-### Para Usuários
-
-1. **Acesse o link** fornecido pelo administrador
-2. **Clique em "Ativar Notificações"**
-3. **Permita notificações** no navegador
-4. **Pronto!** Você receberá notificações deste administrador
-
-## 🛡️ Segurança
-
-- **Senhas**: Hash bcrypt com salt 10
-- **JWT**: Tokens com expiração de 24 horas
-- **CORS**: Configurado para desenvolvimento
-- **Validação**: Middleware de autenticação em todas as rotas protegidas
-
-## 🚀 Deploy em Produção
-
-1. **Configure variáveis de ambiente**
-2. **Use HTTPS** (obrigatório para push notifications)
-3. **Configure CORS** adequadamente
-4. **Use banco de dados** em vez de arquivos JSON
-5. **Configure logs** e monitoramento
-6. **Altere credenciais padrão**
+### Notificações não funcionam
+- Verifique se o site está sendo servido via HTTPS (necessário para Service Workers)
+- Confirme se as chaves VAPID estão configuradas corretamente
+- Teste em um navegador compatível (Chrome, Firefox, Edge)
 
 ## 📝 Logs
 
-O sistema registra:
-- Logins de administradores
-- Registros de usuários
-- Envios de notificações
-- Erros e falhas de entrega
+O sistema gera logs detalhados para:
+- Conexões de usuários
+- Envio de notificações
+- Erros de autenticação
+- Operações do banco de dados
 
 ## 🤝 Contribuição
 
 1. Fork o projeto
-2. Crie uma branch para sua feature
-3. Commit suas mudanças
-4. Push para a branch
+2. Crie uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
+3. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
+4. Push para a branch (`git push origin feature/AmazingFeature`)
 5. Abra um Pull Request
 
 ## 📄 Licença
 
-Este projeto está sob a licença MIT. Veja o arquivo LICENSE para mais detalhes.
+Este projeto está sob a licença MIT. Veja o arquivo `LICENSE` para mais detalhes.
 
 ## 🆘 Suporte
 
-Para dúvidas ou problemas:
-1. Verifique os logs do servidor
-2. Use a página de teste: http://localhost:3000/test-auth.html
-3. Consulte a documentação da API
-4. Abra uma issue no repositório
+Para suporte, abra uma issue no repositório ou entre em contato através do email configurado nas chaves VAPID.

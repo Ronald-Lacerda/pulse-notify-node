@@ -2,12 +2,21 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const webpush = require('web-push');
-const fs = require('fs').promises;
 const path = require('path');
 const jwt = require('jsonwebtoken');
-const bcrypt = require('bcrypt');
+
+// Importar configuração do banco de dados e serviços
+const connectDB = require('./config/database');
+const adminService = require('./services/adminService');
+const subscriptionService = require('./services/subscriptionService');
+const notificationService = require('./services/notificationService');
+const clickService = require('./services/clickService');
+
 const app = express();
 const PORT = process.env.PORT;
+
+// Conectar ao MongoDB
+connectDB();
 
 // Middleware
 app.use(cors());
@@ -27,76 +36,8 @@ webpush.setVapidDetails(
     VAPID_KEYS.privateKey
 );
 
-// Arquivo para armazenar subscrições (em produção, use um banco de dados)
-const SUBSCRIPTIONS_FILE = path.join(__dirname, 'subscriptions.json');
-const ADMINS_FILE = path.join(__dirname, 'admins.json');
-const CLICKS_FILE = path.join(__dirname, 'clicks.json');
-const NOTIFICATIONS_FILE = path.join(__dirname, 'notifications.json');
-
 // Chave secreta para JWT (em produção, use uma variável de ambiente)
 const JWT_SECRET = process.env.JWT_SECRET;
-
-/**
- * Carrega administradores do arquivo
- */
-async function loadAdmins() {
-    try {
-        const data = await fs.readFile(ADMINS_FILE, 'utf8');
-        return JSON.parse(data);
-    } catch (error) {
-        console.log('Arquivo de administradores não encontrado, criando com admin padrão...');
-        // Cria admin padrão
-        const defaultAdmins = {
-            'admin1': {
-                id: 'admin1',
-                username: 'admin',
-                password: await bcrypt.hash('admin123', 10), // senha: admin123
-                name: 'Administrador Principal',
-                createdAt: new Date().toISOString(),
-                active: true
-            }
-        };
-        await saveAdmins(defaultAdmins);
-        return defaultAdmins;
-    }
-}
-
-/**
- * Salva administradores no arquivo
- */
-async function saveAdmins(admins) {
-    try {
-        await fs.writeFile(ADMINS_FILE, JSON.stringify(admins, null, 2));
-        console.log('Administradores salvos com sucesso');
-    } catch (error) {
-        console.error('Erro ao salvar administradores:', error);
-    }
-}
-
-/**
- * Carrega cliques do arquivo
- */
-async function loadClicks() {
-    try {
-        const data = await fs.readFile(CLICKS_FILE, 'utf8');
-        return JSON.parse(data);
-    } catch (error) {
-        console.log('Arquivo de cliques não encontrado, criando novo...');
-        return {};
-    }
-}
-
-/**
- * Salva cliques no arquivo
- */
-async function saveClicks(clicks) {
-    try {
-        await fs.writeFile(CLICKS_FILE, JSON.stringify(clicks, null, 2));
-        console.log('Cliques salvos com sucesso');
-    } catch (error) {
-        console.error('Erro ao salvar cliques:', error);
-    }
-}
 
 /**
  * Gera ID único para rastreamento
@@ -110,31 +51,6 @@ function generateTrackingId() {
  */
 function generateNotificationId() {
     return Date.now().toString(36) + Math.random().toString(36).substr(2);
-}
-
-/**
- * Carrega histórico de notificações
- */
-async function loadNotifications() {
-    try {
-        const data = await fs.readFile(NOTIFICATIONS_FILE, 'utf8');
-        return JSON.parse(data);
-    } catch (error) {
-        console.log('Arquivo de notificações não encontrado, criando novo...');
-        return {};
-    }
-}
-
-/**
- * Salva histórico de notificações
- */
-async function saveNotifications(notifications) {
-    try {
-        await fs.writeFile(NOTIFICATIONS_FILE, JSON.stringify(notifications, null, 2));
-        console.log('Notificações salvas com sucesso');
-    } catch (error) {
-        console.error('Erro ao salvar notificações:', error);
-    }
 }
 
 /**
@@ -155,31 +71,6 @@ function authenticateToken(req, res, next) {
         req.admin = admin;
         next();
     });
-}
-
-/**
- * Carrega subscrições do arquivo
- */
-async function loadSubscriptions() {
-    try {
-        const data = await fs.readFile(SUBSCRIPTIONS_FILE, 'utf8');
-        return JSON.parse(data);
-    } catch (error) {
-        console.log('Arquivo de subscrições não encontrado, criando novo...');
-        return {};
-    }
-}
-
-/**
- * Salva subscrições no arquivo
- */
-async function saveSubscriptions(subscriptions) {
-    try {
-        await fs.writeFile(SUBSCRIPTIONS_FILE, JSON.stringify(subscriptions, null, 2));
-        console.log('Subscrições salvas com sucesso');
-    } catch (error) {
-        console.error('Erro ao salvar subscrições:', error);
-    }
 }
 
 /**
@@ -205,26 +96,19 @@ app.post('/api/subscribe', async (req, res) => {
             });
         }
 
-        // Carrega subscrições existentes
-        const subscriptions = await loadSubscriptions();
-
-        // Registra ou atualiza a subscrição do usuário
-        subscriptions[userId] = {
+        // Criar ou atualizar subscrição usando o serviço
+        const subscriptionData = {
+            userId,
             subscription,
-            adminId: adminId || null, // ID do administrador responsável
+            adminId: adminId || null,
             userAgent,
-            timestamp,
             url,
             language,
             platform,
-            timezone,
-            registeredAt: new Date().toISOString(),
-            lastSeen: new Date().toISOString(),
-            active: true
+            timezone
         };
 
-        // Salva no arquivo
-        await saveSubscriptions(subscriptions);
+        await subscriptionService.createOrUpdate(subscriptionData);
 
         console.log(`Usuário ${userId} registrado/atualizado com sucesso${adminId ? ` (Admin: ${adminId})` : ''}`);
 
@@ -269,16 +153,15 @@ app.post('/api/admin/login', async (req, res) => {
             });
         }
 
-        const admins = await loadAdmins();
-        const admin = Object.values(admins).find(a => a.username === username && a.active);
+        const admin = await adminService.findByUsername(username);
 
-        if (!admin) {
+        if (!admin || !admin.active) {
             return res.status(401).json({ 
                 error: 'Usuário não encontrado ou inativo' 
             });
         }
 
-        const passwordMatch = await bcrypt.compare(password, admin.password);
+        const passwordMatch = await adminService.verifyPassword(admin, password);
         if (!passwordMatch) {
             return res.status(401).json({ 
                 error: 'Senha incorreta' 
@@ -288,7 +171,7 @@ app.post('/api/admin/login', async (req, res) => {
         // Gera token JWT
         const token = jwt.sign(
             { 
-                id: admin.id, 
+                id: admin.adminId, 
                 username: admin.username,
                 name: admin.name 
             },
@@ -301,7 +184,7 @@ app.post('/api/admin/login', async (req, res) => {
         res.json({
             success: true,
             token: token,
-            adminId: admin.id,
+            adminId: admin.adminId,
             username: admin.username,
             name: admin.name
         });
@@ -319,8 +202,7 @@ app.post('/api/admin/login', async (req, res) => {
  */
 app.post('/api/admin/validate', authenticateToken, async (req, res) => {
     try {
-        const admins = await loadAdmins();
-        const admin = admins[req.admin.id];
+        const admin = await adminService.findById(req.admin.id);
 
         if (!admin || !admin.active) {
             return res.status(401).json({ 
@@ -331,7 +213,7 @@ app.post('/api/admin/validate', authenticateToken, async (req, res) => {
         res.json({
             success: true,
             admin: {
-                id: admin.id,
+                id: admin.adminId,
                 username: admin.username,
                 name: admin.name
             }
@@ -358,10 +240,8 @@ app.post('/api/admin/create', authenticateToken, async (req, res) => {
             });
         }
 
-        const admins = await loadAdmins();
-        
         // Verifica se o usuário já existe
-        const existingAdmin = Object.values(admins).find(a => a.username === username);
+        const existingAdmin = await adminService.findByUsername(username);
         if (existingAdmin) {
             return res.status(400).json({ 
                 error: 'Usuário já existe' 
@@ -371,21 +251,14 @@ app.post('/api/admin/create', authenticateToken, async (req, res) => {
         // Gera ID único
         const adminId = 'admin_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
         
-        // Hash da senha
-        const hashedPassword = await bcrypt.hash(password, 10);
-
         // Cria novo admin
-        admins[adminId] = {
-            id: adminId,
-            username: username,
-            password: hashedPassword,
-            name: name,
-            createdAt: new Date().toISOString(),
-            createdBy: req.admin.id,
+        const newAdmin = await adminService.create({
+            adminId,
+            username,
+            password,
+            name,
             active: true
-        };
-
-        await saveAdmins(admins);
+        });
 
         console.log(`Novo admin criado: ${username} (ID: ${adminId})`);
 
@@ -408,14 +281,13 @@ app.post('/api/admin/create', authenticateToken, async (req, res) => {
  */
 app.get('/api/admin/list', authenticateToken, async (req, res) => {
     try {
-        const admins = await loadAdmins();
+        const admins = await adminService.findAll();
 
-        // Remove senhas dos dados retornados
+        // Converte para o formato esperado pelo frontend
         const safeAdmins = {};
-        Object.keys(admins).forEach(id => {
-            const admin = admins[id];
-            safeAdmins[id] = {
-                id: admin.id,
+        admins.forEach(admin => {
+            safeAdmins[admin.adminId] = {
+                id: admin.adminId,
                 username: admin.username,
                 name: admin.name,
                 createdAt: admin.createdAt,
@@ -443,15 +315,23 @@ app.get('/api/admin/list', authenticateToken, async (req, res) => {
  */
 app.get('/api/users', authenticateToken, async (req, res) => {
     try {
-        const subscriptions = await loadSubscriptions();
+        const subscriptions = await subscriptionService.findActiveByAdminId(req.admin.id);
         
-        // Filtra apenas usuários do administrador logado
-        const adminUsers = Object.entries(subscriptions)
-            .filter(([_, userData]) => userData.adminId === req.admin.id)
-            .map(([userId, userData]) => ({
-                userId,
-                ...userData
-            }));
+        // Converte para o formato esperado pelo frontend
+        const adminUsers = subscriptions.map(sub => ({
+            userId: sub.userId,
+            subscription: sub.subscription,
+            adminId: sub.adminId,
+            userAgent: sub.userAgent,
+            url: sub.url,
+            language: sub.language,
+            platform: sub.platform,
+            timezone: sub.timezone,
+            registeredAt: sub.registeredAt,
+            lastSeen: sub.lastSeen,
+            lastNotificationSent: sub.lastNotificationSent,
+            active: sub.active
+        }));
 
         const activeUsers = adminUsers.filter(user => user.active);
         
@@ -487,23 +367,22 @@ app.get('/api/users', authenticateToken, async (req, res) => {
 app.delete('/api/users/:userId', authenticateToken, async (req, res) => {
     try {
         const { userId } = req.params;
-        const subscriptions = await loadSubscriptions();
+        const subscription = await subscriptionService.findByUserId(userId);
 
-        if (!subscriptions[userId]) {
+        if (!subscription) {
             return res.status(404).json({ 
                 error: 'Usuário não encontrado' 
             });
         }
 
         // Verifica se o usuário pertence ao admin logado
-        if (subscriptions[userId].adminId !== req.admin.id) {
+        if (subscription.adminId !== req.admin.id) {
             return res.status(403).json({ 
                 error: 'Você não tem permissão para remover este usuário' 
             });
         }
 
-        delete subscriptions[userId];
-        await saveSubscriptions(subscriptions);
+        await subscriptionService.deactivate(userId);
 
         console.log(`Usuário ${userId} removido por admin ${req.admin.username}`);
 
@@ -533,13 +412,10 @@ app.post('/api/notify-all', authenticateToken, async (req, res) => {
             });
         }
 
-        const subscriptions = await loadSubscriptions();
-        
-        // Filtra apenas usuários ativos do administrador logado
-        const adminUsers = Object.entries(subscriptions)
-            .filter(([_, userData]) => userData.active && userData.adminId === req.admin.id);
+        // Busca usuários ativos do administrador logado
+        const subscriptions = await subscriptionService.findActiveByAdminId(req.admin.id);
 
-        if (adminUsers.length === 0) {
+        if (subscriptions.length === 0) {
             return res.json({ 
                 success: true, 
                 message: 'Nenhum usuário ativo encontrado para este administrador',
@@ -551,11 +427,10 @@ app.post('/api/notify-all', authenticateToken, async (req, res) => {
         let sent = 0;
         let failed = 0;
         const trackingIds = [];
-        const clicks = await loadClicks(); // Carrega uma vez fora do loop
         const notificationId = generateNotificationId();
 
         // Envia notificações em paralelo
-        const promises = adminUsers.map(async ([userId, userData]) => {
+        const promises = subscriptions.map(async (subscription) => {
             try {
                 let finalUrl = url || '/';
                 let trackingId = null;
@@ -565,16 +440,16 @@ app.post('/api/notify-all', authenticateToken, async (req, res) => {
                     trackingId = generateTrackingId();
                     finalUrl = `${req.protocol}://${req.get('host')}/track/${trackingId}`;
                     
-                    // Salva dados de rastreamento
-                    clicks[trackingId] = {
+                    // Salva dados de rastreamento no MongoDB
+                    await clickService.create({
+                        trackingId,
                         originalUrl: url,
-                        userId: userId,
+                        userId: subscription.userId,
                         adminId: req.admin.id,
                         notificationTitle: title,
-                        createdAt: new Date().toISOString(),
                         clicked: false,
                         clickedAt: null
-                    };
+                    });
                     trackingIds.push(trackingId);
                 }
 
@@ -588,52 +463,42 @@ app.post('/api/notify-all', authenticateToken, async (req, res) => {
                 });
 
                 await webpush.sendNotification(
-                    userData.subscription,
+                    subscription.subscription,
                     notificationPayload
                 );
 
                 // Atualiza último envio
-                subscriptions[userId].lastNotificationSent = new Date().toISOString();
+                await subscriptionService.updateLastNotificationSent(subscription.userId);
                 sent++;
 
             } catch (error) {
-                console.error(`Erro ao enviar para ${userId}:`, error);
+                console.error(`Erro ao enviar para ${subscription.userId}:`, error);
                 failed++;
 
                 // Se a subscrição é inválida, marca como inativa
                 if (error.statusCode === 410 || error.statusCode === 404) {
-                    subscriptions[userId].active = false;
-                    console.log(`Usuário ${userId} marcado como inativo`);
+                    await subscriptionService.deactivate(subscription.userId);
+                    console.log(`Usuário ${subscription.userId} marcado como inativo`);
                 }
             }
         });
 
         await Promise.all(promises);
         
-        // Salva todos os cliques de uma vez
-        if (trackingIds.length > 0) {
-            await saveClicks(clicks);
-        }
-        
-        // Salva histórico da notificação
-        const notifications = await loadNotifications();
-        notifications[notificationId] = {
-            id: notificationId,
+        // Salva histórico da notificação no MongoDB
+        await notificationService.create({
+            notificationId,
             adminId: req.admin.id,
-            title: title,
-            body: body,
+            title,
+            body,
             icon: icon || 'https://placehold.co/192x192/1e293b/ffffff?text=P',
             url: url || null,
             tag: tag || 'pulso-notification',
-            sentAt: new Date().toISOString(),
-            sent: sent,
-            failed: failed,
-            totalUsers: adminUsers.length,
-            trackingIds: trackingIds
-        };
-        await saveNotifications(notifications);
-        
-        await saveSubscriptions(subscriptions);
+            sent,
+            failed,
+            totalUsers: subscriptions.length,
+            trackingIds
+        });
 
         console.log(`Notificação enviada por admin ${req.admin.username} para seus usuários: ${sent} sucessos, ${failed} falhas${trackingIds.length > 0 ? ` (${trackingIds.length} links de rastreamento criados)` : ''}`);
 
@@ -659,12 +524,25 @@ app.post('/api/notify-all', authenticateToken, async (req, res) => {
  */
 app.get('/api/notifications', authenticateToken, async (req, res) => {
     try {
-        const notifications = await loadNotifications();
+        const result = await notificationService.findByAdminId(req.admin.id, 1, 50);
         
-        // Filtra apenas notificações do administrador logado
-        const adminNotifications = Object.values(notifications)
-            .filter(notification => notification.adminId === req.admin.id)
-            .sort((a, b) => new Date(b.sentAt) - new Date(a.sentAt)); // Mais recentes primeiro
+        // Converte para o formato esperado pelo frontend
+        const adminNotifications = result.notifications.map(notification => ({
+            id: notification.notificationId,
+            adminId: notification.adminId,
+            title: notification.title,
+            body: notification.body,
+            icon: notification.icon,
+            url: notification.url,
+            tag: notification.tag,
+            sentAt: notification.sentAt,
+            sent: notification.sent,
+            failed: notification.failed,
+            totalUsers: notification.totalUsers,
+            trackingIds: notification.trackingIds,
+            isResend: notification.isResend,
+            originalNotificationId: notification.originalNotificationId
+        }));
 
         res.json({
             success: true,
@@ -685,9 +563,7 @@ app.get('/api/notifications', authenticateToken, async (req, res) => {
 app.post('/api/notifications/:notificationId/resend', authenticateToken, async (req, res) => {
     try {
         const { notificationId } = req.params;
-        const notifications = await loadNotifications();
-        
-        const originalNotification = notifications[notificationId];
+        const originalNotification = await notificationService.findById(notificationId);
         
         if (!originalNotification) {
             return res.status(404).json({ 
@@ -705,13 +581,10 @@ app.post('/api/notifications/:notificationId/resend', authenticateToken, async (
         // Reenvia usando os mesmos dados da notificação original
         const { title, body, icon, url, tag } = originalNotification;
         
-        const subscriptions = await loadSubscriptions();
-        
-        // Filtra apenas usuários ativos do administrador logado
-        const adminUsers = Object.entries(subscriptions)
-            .filter(([_, userData]) => userData.active && userData.adminId === req.admin.id);
+        // Busca usuários ativos do administrador logado
+        const subscriptions = await subscriptionService.findActiveByAdminId(req.admin.id);
 
-        if (adminUsers.length === 0) {
+        if (subscriptions.length === 0) {
             return res.json({ 
                 success: true, 
                 message: 'Nenhum usuário ativo encontrado para este administrador',
@@ -723,11 +596,10 @@ app.post('/api/notifications/:notificationId/resend', authenticateToken, async (
         let sent = 0;
         let failed = 0;
         const trackingIds = [];
-        const clicks = await loadClicks();
         const newNotificationId = generateNotificationId();
 
         // Envia notificações em paralelo
-        const promises = adminUsers.map(async ([userId, userData]) => {
+        const promises = subscriptions.map(async (subscription) => {
             try {
                 let finalUrl = url || '/';
                 let trackingId = null;
@@ -737,16 +609,16 @@ app.post('/api/notifications/:notificationId/resend', authenticateToken, async (
                     trackingId = generateTrackingId();
                     finalUrl = `${req.protocol}://${req.get('host')}/track/${trackingId}`;
                     
-                    // Salva dados de rastreamento
-                    clicks[trackingId] = {
+                    // Salva dados de rastreamento no MongoDB
+                    await clickService.create({
+                        trackingId,
                         originalUrl: url,
-                        userId: userId,
+                        userId: subscription.userId,
                         adminId: req.admin.id,
                         notificationTitle: title,
-                        createdAt: new Date().toISOString(),
                         clicked: false,
                         clickedAt: null
-                    };
+                    });
                     trackingIds.push(trackingId);
                 }
 
@@ -760,53 +632,44 @@ app.post('/api/notifications/:notificationId/resend', authenticateToken, async (
                 });
 
                 await webpush.sendNotification(
-                    userData.subscription,
+                    subscription.subscription,
                     notificationPayload
                 );
 
                 // Atualiza último envio
-                subscriptions[userId].lastNotificationSent = new Date().toISOString();
+                await subscriptionService.updateLastNotificationSent(subscription.userId);
                 sent++;
 
             } catch (error) {
-                console.error(`Erro ao reenviar para ${userId}:`, error);
+                console.error(`Erro ao reenviar para ${subscription.userId}:`, error);
                 failed++;
 
                 // Se a subscrição é inválida, marca como inativa
                 if (error.statusCode === 410 || error.statusCode === 404) {
-                    subscriptions[userId].active = false;
-                    console.log(`Usuário ${userId} marcado como inativo`);
+                    await subscriptionService.deactivate(subscription.userId);
+                    console.log(`Usuário ${subscription.userId} marcado como inativo`);
                 }
             }
         });
 
         await Promise.all(promises);
         
-        // Salva todos os cliques de uma vez
-        if (trackingIds.length > 0) {
-            await saveClicks(clicks);
-        }
-        
-        // Salva histórico da nova notificação (reenvio)
-        notifications[newNotificationId] = {
-            id: newNotificationId,
+        // Salva histórico da nova notificação (reenvio) no MongoDB
+        await notificationService.create({
+            notificationId: newNotificationId,
             adminId: req.admin.id,
-            title: title,
-            body: body,
-            icon: icon,
-            url: url,
-            tag: tag,
-            sentAt: new Date().toISOString(),
-            sent: sent,
-            failed: failed,
-            totalUsers: adminUsers.length,
-            trackingIds: trackingIds,
+            title,
+            body,
+            icon,
+            url,
+            tag,
+            sent,
+            failed,
+            totalUsers: subscriptions.length,
+            trackingIds,
             isResend: true,
             originalNotificationId: notificationId
-        };
-        await saveNotifications(notifications);
-        
-        await saveSubscriptions(subscriptions);
+        });
 
         console.log(`Notificação reenviada por admin ${req.admin.username}: ${sent} sucessos, ${failed} falhas`);
 
@@ -833,10 +696,9 @@ app.post('/api/notifications/:notificationId/resend', authenticateToken, async (
 app.get('/track/:trackingId', async (req, res) => {
     try {
         const { trackingId } = req.params;
-        const clicks = await loadClicks();
-        const clickData = clicks[trackingId];
+        const click = await clickService.findByTrackingId(trackingId);
 
-        if (!clickData) {
+        if (!click) {
             return res.status(404).send(`
                 <!DOCTYPE html>
                 <html>
@@ -853,14 +715,13 @@ app.get('/track/:trackingId', async (req, res) => {
         }
 
         // Registra o clique
-        if (!clickData.clicked) {
-            clickData.clicked = true;
-            clickData.clickedAt = new Date().toISOString();
-            clickData.userAgent = req.get('User-Agent');
-            clickData.ip = req.ip || req.connection.remoteAddress;
-            await saveClicks(clicks);
+        if (!click.clicked) {
+            await clickService.registerClick(trackingId, {
+                userAgent: req.get('User-Agent'),
+                ip: req.ip || req.connection.remoteAddress
+            });
             
-            console.log(`Clique registrado: ${trackingId} -> ${clickData.originalUrl} (usuário: ${clickData.userId})`);
+            console.log(`Clique registrado: ${trackingId} -> ${click.originalUrl} (usuário: ${click.userId})`);
         }
 
         // Página de redirecionamento imperceptível
@@ -870,7 +731,7 @@ app.get('/track/:trackingId', async (req, res) => {
             <head>
                 <title>Redirecionando...</title>
                 <meta charset="UTF-8">
-                <meta http-equiv="refresh" content="0;url=${clickData.originalUrl}">
+                <meta http-equiv="refresh" content="0;url=${click.originalUrl}">
                 <style>
                     body {
                         font-family: Arial, sans-serif;
@@ -901,7 +762,7 @@ app.get('/track/:trackingId', async (req, res) => {
                 <script>
                     // Redirecionamento via JavaScript como fallback
                     setTimeout(function() {
-                        window.location.href = '${clickData.originalUrl}';
+                        window.location.href = '${click.originalUrl}';
                     }, 100);
                 </script>
             </head>
@@ -937,26 +798,24 @@ app.get('/track/:trackingId', async (req, res) => {
  */
 app.get('/api/clicks/stats', authenticateToken, async (req, res) => {
     try {
-        const clicks = await loadClicks();
-        const adminId = req.admin.id;
+        const stats = await clickService.getStatsByAdminId(req.admin.id);
+        const recentClicks = await clickService.findRecent(10, req.admin.id);
         
-        // Filtra cliques do admin atual
-        const adminClicks = Object.values(clicks).filter(click => click.adminId === adminId);
-        
-        const stats = {
-            total: adminClicks.length,
-            clicked: adminClicks.filter(click => click.clicked).length,
-            clickRate: adminClicks.length > 0 ? 
-                ((adminClicks.filter(click => click.clicked).length / adminClicks.length) * 100).toFixed(2) : 0,
-            recentClicks: adminClicks
-                .filter(click => click.clicked)
-                .sort((a, b) => new Date(b.clickedAt) - new Date(a.clickedAt))
-                .slice(0, 10)
-        };
-
         res.json({
             success: true,
-            stats: stats
+            stats: {
+                total: stats.total,
+                clicked: stats.clicked,
+                clickRate: stats.clickRate,
+                recentClicks: recentClicks.map(click => ({
+                    trackingId: click.trackingId,
+                    originalUrl: click.originalUrl,
+                    userId: click.userId,
+                    notificationTitle: click.notificationTitle,
+                    clickedAt: click.clickedAt,
+                    userAgent: click.userAgent
+                }))
+            }
         });
 
     } catch (error) {
@@ -998,33 +857,50 @@ app.get('/ios-instructions', (req, res) => {
 });
 
 // Inicia o servidor
-app.listen(PORT, () => {
-    console.log(`Servidor rodando na porta ${PORT}`);
-    console.log(`Acesse: http://localhost:${PORT}`);
-    console.log('\n📚 DOCUMENTAÇÃO DAS ROTAS:');
-    console.log(`🔗 http://localhost:${PORT}/documentation`);
-    console.log('\n📄 Páginas disponíveis:');
-    console.log('- GET  / (página principal)');
-    console.log('- GET  /subscribe (página de inscrição)');
-    console.log('- GET  /login.html (login administrativo)');
-    console.log('- GET  /admin.html (painel administrativo)');
-    console.log('- GET  /test-auth.html (teste de autenticação)');
-    console.log('- GET  /ios-instructions.html (instruções iOS)');
-    console.log('- GET  /main.html (documentação das rotas)');
-    console.log('\n🔌 APIs públicas:');
-    console.log('- GET  /api/vapid-public-key');
-    console.log('- POST /api/subscribe');
-    console.log('\n🔐 APIs de autenticação:');
-    console.log('- POST /api/admin/login');
-    console.log('- POST /api/admin/validate (protegido)');
-    console.log('- POST /api/admin/create (protegido)');
-    console.log('- GET  /api/admin/list (protegido)');
-    console.log('\n🛡️  APIs protegidas (requerem autenticação):');
-    console.log('- GET  /api/users');
-    console.log('- DELETE /api/users/:userId');
-    console.log('- POST /api/notify/:userId');
-    console.log('- POST /api/notify-all');
-    console.log('\n💡 Credenciais padrão: admin / admin123');
-});
+async function startServer() {
+    try {
+        // Conecta ao MongoDB
+        await connectDB();
+        
+        // Cria admin padrão se não existir
+        await adminService.createDefaultAdmin();
+        
+        app.listen(PORT, () => {
+            console.log(`Servidor rodando na porta ${PORT}`);
+            console.log(`Acesse: http://localhost:${PORT}`);
+            console.log('\n📚 DOCUMENTAÇÃO DAS ROTAS:');
+            console.log(`🔗 http://localhost:${PORT}/documentation`);
+            console.log('\n📄 Páginas disponíveis:');
+            console.log('- GET  / (página principal)');
+            console.log('- GET  /subscribe (página de inscrição)');
+            console.log('- GET  /login.html (login administrativo)');
+            console.log('- GET  /admin.html (painel administrativo)');
+            console.log('- GET  /test-auth.html (teste de autenticação)');
+            console.log('- GET  /ios-instructions.html (instruções iOS)');
+            console.log('- GET  /main.html (documentação das rotas)');
+            console.log('\n🔌 APIs públicas:');
+            console.log('- GET  /api/vapid-public-key');
+            console.log('- POST /api/subscribe');
+            console.log('\n🔐 APIs de autenticação:');
+            console.log('- POST /api/admin/login');
+            console.log('- POST /api/admin/validate (protegido)');
+            console.log('- POST /api/admin/create (protegido)');
+            console.log('- GET  /api/admin/list (protegido)');
+            console.log('\n🛡️  APIs protegidas (requerem autenticação):');
+            console.log('- GET  /api/users');
+            console.log('- DELETE /api/users/:userId');
+            console.log('- POST /api/notify/:userId');
+            console.log('- POST /api/notify-all');
+            console.log('\n💡 Credenciais padrão: admin / admin123');
+            console.log('\n🗄️  Banco de dados: MongoDB conectado com sucesso!');
+        });
+        
+    } catch (error) {
+        console.error('Erro ao iniciar servidor:', error);
+        process.exit(1);
+    }
+}
+
+startServer();
 
 module.exports = app;

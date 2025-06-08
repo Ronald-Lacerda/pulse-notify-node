@@ -57,10 +57,10 @@ try {
     console.log(`✅ Nome: ${pkg.name}`);
     console.log(`✅ Versão: ${pkg.version}`);
     console.log(`✅ Script start: ${pkg.scripts?.start || 'NÃO DEFINIDO'}`);
-    
+
     const requiredDeps = ['express', 'cors', 'web-push', 'jsonwebtoken', 'bcrypt'];
     const missingDeps = requiredDeps.filter(dep => !pkg.dependencies?.[dep]);
-    
+
     if (missingDeps.length > 0) {
         console.log(`❌ Dependências ausentes: ${missingDeps.join(', ')}`);
     } else {

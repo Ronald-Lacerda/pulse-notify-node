@@ -18,11 +18,11 @@ try {
     execSync('npm install', { stdio: 'inherit' });
 
     console.log('\n✅ Dependências instaladas com sucesso!');
-    
+
     // Verifica se as dependências críticas estão instaladas
     const criticalDeps = ['express', 'cors', 'web-push', 'jsonwebtoken', 'bcrypt'];
     console.log('\n🔍 Verificando dependências críticas...');
-    
+
     for (const dep of criticalDeps) {
         try {
             require.resolve(dep);

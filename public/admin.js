@@ -34,22 +34,81 @@ document.addEventListener('DOMContentLoaded', () => {
     let adminsList = {}; // Cache dos administradores
 
     /**
+     * Função de debug para testar API manualmente
+     */
+    window.testAdminAPI = async function() {
+        const token = localStorage.getItem('admin_token');
+        
+        if (!token) {
+            console.error('Nenhum token encontrado!');
+            return;
+        }
+
+        try {
+            console.log('Testando /api/admin/validate...');
+            const validateResponse = await fetch(`${SERVER_URL}/api/admin/validate`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            console.log('Validate response:', validateResponse.status, validateResponse.statusText);
+            
+            if (validateResponse.ok) {
+                const validateData = await validateResponse.json();
+                console.log('Validate data:', validateData);
+            }
+
+            console.log('Testando /api/admin/list...');
+            const listResponse = await fetch('/api/admin/list', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            console.log('List response:', listResponse.status, listResponse.statusText);
+            
+            if (listResponse.ok) {
+                const listData = await listResponse.json();
+                console.log('List data:', listData);
+            } else {
+                const errorText = await listResponse.text();
+                console.log('List error:', errorText);
+            }
+        } catch (error) {
+            console.error('Erro no teste:', error);
+        }
+    };
+    /**
      * Carrega lista de administradores
      */
     async function loadAdminsList() {
         try {
+            const token = localStorage.getItem('admin_token');
+            if (!token) {
+                console.log('Token de admin não encontrado para carregar lista');
+                return;
+            }
+
             const response = await fetch('/api/admin/list', {
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+                    'Authorization': `Bearer ${token}`
                 }
             });
 
             if (response.ok) {
                 const data = await response.json();
                 adminsList = data.admins || {};
+                console.log('Lista de admins carregada:', Object.keys(adminsList).length, 'admins');
+            } else {
+                console.error('Erro ao carregar lista de admins:', response.status, response.statusText);
+                if (response.status === 401 || response.status === 403) {
+                    console.log('Token inválido ou expirado, redirecionando para login');
+                    redirectToLogin();
+                }
             }
         } catch (error) {
-            console.log('Não foi possível carregar lista de admins:', error);
+            console.error('Erro na requisição para carregar lista de admins:', error);
         }
     }
 
@@ -82,6 +141,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const adminId = localStorage.getItem('admin_id');
 
         if (!token || !adminId) {
+            console.log('Token ou ID do admin não encontrados');
             redirectToLogin();
             return;
         }
@@ -98,11 +158,17 @@ document.addEventListener('DOMContentLoaded', () => {
             if (response.ok) {
                 const data = await response.json();
                 adminData = data.admin;
+                console.log('Autenticação válida para admin:', adminData.name || adminData.username);
+                
                 setupAdminInterface();
+                
+                // Carrega dados após autenticação bem-sucedida
+                await loadAdminsList(); // Carrega primeiro a lista de admins
                 loadUsers();
                 loadClickStats();
                 loadNotifications();
             } else {
+                console.error('Falha na validação:', response.status, response.statusText);
                 redirectToLogin();
             }
         } catch (error) {
@@ -224,8 +290,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             showLoading();
 
-            // Carrega lista de admins primeiro
-            await loadAdminsList();
+
 
             const response = await authenticatedFetch(`${SERVER_URL}/api/users`);
 
