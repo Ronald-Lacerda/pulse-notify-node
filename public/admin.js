@@ -153,20 +153,43 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             await navigator.clipboard.writeText(shareableLinkEl.value);
 
-            // Feedback visual
-            const originalText = copyLinkBtn.textContent;
-            copyLinkBtn.textContent = 'Copiado!';
-            copyLinkBtn.classList.add('bg-green-600');
-            copyLinkBtn.classList.remove('bg-blue-600');
+            // Feedback visual melhorado
+            const originalText = copyLinkBtn.innerHTML;
+            copyLinkBtn.innerHTML = `
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+                Copiado!
+            `;
+            copyLinkBtn.classList.remove('bg-primary-600', 'hover:bg-primary-700');
+            copyLinkBtn.classList.add('bg-green-600', 'hover:bg-green-700');
 
             setTimeout(() => {
-                copyLinkBtn.textContent = originalText;
-                copyLinkBtn.classList.remove('bg-green-600');
-                copyLinkBtn.classList.add('bg-blue-600');
+                copyLinkBtn.innerHTML = originalText;
+                copyLinkBtn.classList.remove('bg-green-600', 'hover:bg-green-700');
+                copyLinkBtn.classList.add('bg-primary-600', 'hover:bg-primary-700');
             }, 2000);
 
         } catch (error) {
             console.error('Erro ao copiar link:', error);
+            
+            // Feedback de erro
+            const originalText = copyLinkBtn.innerHTML;
+            copyLinkBtn.innerHTML = `
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+                Erro
+            `;
+            copyLinkBtn.classList.remove('bg-primary-600', 'hover:bg-primary-700');
+            copyLinkBtn.classList.add('bg-red-600', 'hover:bg-red-700');
+
+            setTimeout(() => {
+                copyLinkBtn.innerHTML = originalText;
+                copyLinkBtn.classList.remove('bg-red-600', 'hover:bg-red-700');
+                copyLinkBtn.classList.add('bg-primary-600', 'hover:bg-primary-700');
+            }, 2000);
+            
             alert('Erro ao copiar link. Copie manualmente.');
         }
     }
@@ -290,8 +313,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (recentClicks.length === 0) {
             clicksTableBody.innerHTML = `
                 <tr>
-                    <td colspan="4" class="px-4 py-8 text-center text-gray-500">
-                        Nenhum clique registrado ainda
+                    <td colspan="4" class="px-6 py-12 text-center text-slate-500">
+                        <div class="flex flex-col items-center gap-4">
+                            <div class="bg-slate-100 p-4 rounded-xl">
+                                <svg class="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"></path>
+                                </svg>
+                            </div>
+                            <span class="text-lg font-medium">Nenhum clique registrado ainda</span>
+                        </div>
                     </td>
                 </tr>
             `;
@@ -299,19 +329,19 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         clicksTableBody.innerHTML = recentClicks.map(click => `
-            <tr class="border-t hover:bg-gray-50">
-                <td class="px-4 py-3 text-sm font-mono text-gray-800">
+            <tr class="hover:bg-slate-50/50 transition-colors">
+                <td class="px-6 py-4 text-sm font-mono text-slate-800">
                     ${click.userId}
                 </td>
-                <td class="px-4 py-3 text-sm text-gray-600">
+                <td class="px-6 py-4 text-sm text-slate-600">
                     ${click.notificationTitle}
                 </td>
-                <td class="px-4 py-3 text-sm text-blue-600">
-                    <a href="${click.originalUrl}" target="_blank" class="hover:underline">
+                <td class="px-6 py-4 text-sm">
+                    <a href="${click.originalUrl}" target="_blank" class="text-primary-600 hover:text-primary-700 hover:underline transition-colors">
                         ${click.originalUrl.length > 50 ? click.originalUrl.substring(0, 50) + '...' : click.originalUrl}
                     </a>
                 </td>
-                <td class="px-4 py-3 text-sm text-gray-600">
+                <td class="px-6 py-4 text-sm text-slate-600">
                     ${formatDate(click.clickedAt)}
                 </td>
             </tr>
@@ -325,8 +355,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (notifications.length === 0) {
             notificationsTableBody.innerHTML = `
                 <tr>
-                    <td colspan="6" class="px-4 py-8 text-center text-gray-500">
-                        Nenhuma notificação enviada ainda
+                    <td colspan="6" class="px-6 py-12 text-center text-slate-500">
+                        <div class="flex flex-col items-center gap-4">
+                            <div class="bg-slate-100 p-4 rounded-xl">
+                                <svg class="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-5 5v-5zM4 19h6v-2H4v2zM4 15h8v-2H4v2zM4 11h10V9H4v2z"></path>
+                                </svg>
+                            </div>
+                            <span class="text-lg font-medium">Nenhuma notificação enviada ainda</span>
+                        </div>
                     </td>
                 </tr>
             `;
@@ -334,27 +371,27 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         notificationsTableBody.innerHTML = notifications.map(notification => `
-            <tr class="border-t hover:bg-gray-50">
-                <td class="px-4 py-3 text-sm font-medium text-gray-900">
+            <tr class="hover:bg-slate-50/50 transition-colors">
+                <td class="px-6 py-4 text-sm font-medium text-slate-900">
                     ${notification.title}
-                    ${notification.isResend ? '<span class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Reenvio</span>' : ''}
+                    ${notification.isResend ? '<span class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">Reenvio</span>' : ''}
                 </td>
-                <td class="px-4 py-3 text-sm text-gray-600">
+                <td class="px-6 py-4 text-sm text-slate-600">
                     ${notification.body.length > 50 ? notification.body.substring(0, 50) + '...' : notification.body}
                 </td>
-                <td class="px-4 py-3 text-sm text-blue-600">
-                    ${notification.url ? `<a href="${notification.url}" target="_blank" class="hover:underline">${notification.url.length > 30 ? notification.url.substring(0, 30) + '...' : notification.url}</a>` : 'N/A'}
+                <td class="px-6 py-4 text-sm">
+                    ${notification.url ? `<a href="${notification.url}" target="_blank" class="text-primary-600 hover:text-primary-700 hover:underline transition-colors">${notification.url.length > 30 ? notification.url.substring(0, 30) + '...' : notification.url}</a>` : '<span class="text-slate-400">N/A</span>'}
                 </td>
-                <td class="px-4 py-3 text-sm text-gray-600">
+                <td class="px-6 py-4 text-sm text-slate-600">
                     ${formatDate(notification.sentAt)}
                 </td>
-                <td class="px-4 py-3 text-sm text-gray-600">
-                    <span class="text-green-600">${notification.sent} enviados</span>
-                    ${notification.failed > 0 ? `<br><span class="text-red-600">${notification.failed} falharam</span>` : ''}
+                <td class="px-6 py-4 text-sm">
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">${notification.sent} enviados</span>
+                    ${notification.failed > 0 ? `<br><span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 mt-1">${notification.failed} falharam</span>` : ''}
                 </td>
-                <td class="px-4 py-3 text-sm">
+                <td class="px-6 py-4 text-sm">
                     <button onclick="resendNotification('${notification.id}')" 
-                            class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium py-1 px-3 rounded transition-colors">
+                            class="bg-primary-600 hover:bg-primary-700 text-white text-xs font-medium py-2 px-4 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:-translate-y-0.5">
                         Reenviar
                     </button>
                 </td>
@@ -369,8 +406,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (users.length === 0) {
             usersTableBody.innerHTML = `
                 <tr>
-                    <td colspan="8" class="px-4 py-8 text-center text-gray-500">
-                        Nenhum usuário registrado
+                    <td colspan="8" class="px-6 py-12 text-center text-slate-500">
+                        <div class="flex flex-col items-center gap-4">
+                            <div class="bg-slate-100 p-4 rounded-xl">
+                                <svg class="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                                </svg>
+                            </div>
+                            <span class="text-lg font-medium">Nenhum usuário registrado</span>
+                        </div>
                     </td>
                 </tr>
             `;
@@ -378,15 +422,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         usersTableBody.innerHTML = users.map(user => `
-            <tr class="border-t hover:bg-gray-50">
-                <td class="px-4 py-3 text-sm font-mono text-gray-800">
+            <tr class="hover:bg-slate-50/50 transition-colors">
+                <td class="px-6 py-4 text-sm font-mono text-slate-800">
                     ${user.userId}
                 </td>
-                <td class="px-4 py-3 text-sm text-gray-600">
+                <td class="px-6 py-4 text-sm text-slate-600">
                     ${getAdminName(user.adminId)}
                 </td>
-                <td class="px-4 py-3">
-                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                <td class="px-6 py-4">
+                    <span class="inline-flex px-3 py-1 text-xs font-semibold rounded-full ${
                         user.active 
                             ? 'bg-green-100 text-green-800' 
                             : 'bg-red-100 text-red-800'
@@ -394,21 +438,21 @@ document.addEventListener('DOMContentLoaded', () => {
                         ${user.active ? 'Ativo' : 'Inativo'}
                     </span>
                 </td>
-                <td class="px-4 py-3 text-sm text-gray-600">
-                    ${user.platform || 'N/A'}
+                <td class="px-6 py-4 text-sm text-slate-600">
+                    ${user.platform || '<span class="text-slate-400">N/A</span>'}
                 </td>
-                <td class="px-4 py-3 text-sm text-gray-600">
-                    ${user.language || 'N/A'}
+                <td class="px-6 py-4 text-sm text-slate-600">
+                    ${user.language || '<span class="text-slate-400">N/A</span>'}
                 </td>
-                <td class="px-4 py-3 text-sm text-gray-600">
+                <td class="px-6 py-4 text-sm text-slate-600">
                     ${formatDate(user.registeredAt)}
                 </td>
-                <td class="px-4 py-3 text-sm text-gray-600">
-                    ${user.lastNotificationSent ? formatDate(user.lastNotificationSent) : 'Nunca'}
+                <td class="px-6 py-4 text-sm text-slate-600">
+                    ${user.lastNotificationSent ? formatDate(user.lastNotificationSent) : '<span class="text-slate-400">Nunca</span>'}
                 </td>
-                <td class="px-4 py-3">
+                <td class="px-6 py-4">
                     <button onclick="removeUser('${user.userId}')" 
-                            class="text-red-600 hover:text-red-800 text-sm font-medium">
+                            class="text-red-600 hover:text-red-800 text-sm font-medium hover:bg-red-50 px-3 py-1 rounded-lg transition-all duration-200">
                         Remover
                     </button>
                 </td>
@@ -568,10 +612,10 @@ document.addEventListener('DOMContentLoaded', () => {
     function showLoading() {
         usersTableBody.innerHTML = `
             <tr>
-                <td colspan="8" class="px-4 py-8 text-center text-gray-500">
-                    <div class="flex items-center justify-center">
-                        <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mr-2"></div>
-                        Carregando usuários...
+                <td colspan="8" class="px-6 py-12 text-center text-slate-500">
+                    <div class="flex flex-col items-center gap-4">
+                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
+                        <span class="text-lg font-medium">Carregando usuários...</span>
                     </div>
                 </td>
             </tr>
@@ -584,10 +628,10 @@ document.addEventListener('DOMContentLoaded', () => {
     function showClickStatsLoading() {
         clicksTableBody.innerHTML = `
             <tr>
-                <td colspan="4" class="px-4 py-8 text-center text-gray-500">
-                    <div class="flex items-center justify-center">
-                        <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mr-2"></div>
-                        Carregando estatísticas...
+                <td colspan="4" class="px-6 py-12 text-center text-slate-500">
+                    <div class="flex flex-col items-center gap-4">
+                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500"></div>
+                        <span class="text-lg font-medium">Carregando estatísticas...</span>
                     </div>
                 </td>
             </tr>
@@ -600,8 +644,15 @@ document.addEventListener('DOMContentLoaded', () => {
     function showError(message) {
         usersTableBody.innerHTML = `
             <tr>
-                <td colspan="8" class="px-4 py-8 text-center text-red-500">
-                    ${message}
+                <td colspan="8" class="px-6 py-12 text-center">
+                    <div class="flex flex-col items-center gap-4">
+                        <div class="bg-red-100 p-3 rounded-xl">
+                            <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        </div>
+                        <span class="text-red-600 font-medium">${message}</span>
+                    </div>
                 </td>
             </tr>
         `;
@@ -613,8 +664,15 @@ document.addEventListener('DOMContentLoaded', () => {
     function showClickStatsError(message) {
         clicksTableBody.innerHTML = `
             <tr>
-                <td colspan="4" class="px-4 py-8 text-center text-red-500">
-                    ${message}
+                <td colspan="4" class="px-6 py-12 text-center">
+                    <div class="flex flex-col items-center gap-4">
+                        <div class="bg-red-100 p-3 rounded-xl">
+                            <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        </div>
+                        <span class="text-red-600 font-medium">${message}</span>
+                    </div>
                 </td>
             </tr>
         `;
@@ -626,10 +684,10 @@ document.addEventListener('DOMContentLoaded', () => {
     function showNotificationsLoading() {
         notificationsTableBody.innerHTML = `
             <tr>
-                <td colspan="6" class="px-4 py-8 text-center text-gray-500">
-                    <div class="flex items-center justify-center">
-                        <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mr-2"></div>
-                        Carregando notificações...
+                <td colspan="6" class="px-6 py-12 text-center text-slate-500">
+                    <div class="flex flex-col items-center gap-4">
+                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
+                        <span class="text-lg font-medium">Carregando notificações...</span>
                     </div>
                 </td>
             </tr>
@@ -642,8 +700,15 @@ document.addEventListener('DOMContentLoaded', () => {
     function showNotificationsError(message) {
         notificationsTableBody.innerHTML = `
             <tr>
-                <td colspan="6" class="px-4 py-8 text-center text-red-500">
-                    ${message}
+                <td colspan="6" class="px-6 py-12 text-center">
+                    <div class="flex flex-col items-center gap-4">
+                        <div class="bg-red-100 p-3 rounded-xl">
+                            <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        </div>
+                        <span class="text-red-600 font-medium">${message}</span>
+                    </div>
                 </td>
             </tr>
         `;
