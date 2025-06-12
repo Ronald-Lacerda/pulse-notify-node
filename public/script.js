@@ -12,22 +12,327 @@ document.addEventListener('DOMContentLoaded', () => {
     let VAPID_PUBLIC_KEY = null; // Será carregada do servidor
 
     // Detecta se é um dispositivo iOS
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
-                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    
-    // Detecta se está no Safari
-    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+    const isIOS = () => {
+        // Check for common iOS device user agents
+        if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+          return true;
+        }
+
+        // Modern iPads on iPadOS (which report as 'MacIntel' with touch support)
+        // This is a more reliable way to detect iPads running iPadOS.
+        if (navigator.userAgent.includes('Mac') && navigator.maxTouchPoints > 1) {
+          return true;
+        }
+
+        // Additional check for iOS Safari
+        if (navigator.userAgent.includes('Safari') && navigator.userAgent.includes('Mobile')) {
+          return true;
+        }
+
+        return false;
+      };
+
+    // Detecta se está em qualquer navegador no iOS (não apenas Safari)
+    const isIOSBrowser = () => {
+        return isIOS() && !window.navigator.standalone && !window.matchMedia('(display-mode: standalone)').matches;
+    };
 
     // Gera ou recupera ID único do usuário
     let userId = getUserId();
-    
+
     // Captura ID do administrador da URL
     let adminId = getAdminIdFromURL();
 
     // Inicialização
     initializeApp();
 
-    subscribeBtn.addEventListener('click', requestNotificationPermission);
+    // Verifica se deve redirecionar para instruções do iOS
+    // Adiciona um pequeno delay para garantir que tudo esteja carregado
+    setTimeout(() => {
+        checkIOSRedirect();
+    }, 100);
+
+    // Inicializa funcionalidades específicas da página
+    initializePageSpecificFeatures();
+
+    // Adiciona event listener apenas se o botão existir
+    if (subscribeBtn) {
+        subscribeBtn.addEventListener('click', requestNotificationPermission);
+    }
+
+    /**
+     * Inicializa funcionalidades específicas da página
+     */
+    function initializePageSpecificFeatures() {
+        // Funcionalidades específicas para a página de instruções do iOS
+        if (window.location.pathname.includes('ios-instructions.html')) {
+            initializeIOSInstructionsPage();
+        }
+    }
+
+    /**
+     * Inicializa a página de instruções do iOS
+     */
+    function initializeIOSInstructionsPage() {
+        const activateBtn = document.getElementById('activate-notifications-btn');
+        const instructionsDiv = document.querySelector('.bg-white.p-8.rounded-2xl.shadow-sm.border.border-slate-200.max-w-md.mx-auto');
+        const feedbackDiv = document.getElementById('notification-feedback');
+        const feedbackIcon = document.getElementById('feedback-icon');
+        const feedbackTitle = document.getElementById('feedback-title');
+        const feedbackMessage = document.getElementById('feedback-message');
+        const pwaStatus = document.getElementById('pwa-status');
+        const pwaStatusText = document.getElementById('pwa-status-text');
+
+        // Verifica o status do PWA
+        checkPWAStatus();
+
+        function checkPWAStatus() {
+            const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
+
+            if (isStandalone) {
+                // App foi adicionado à tela inicial
+                if (pwaStatus) {
+                    pwaStatus.className = 'mt-6 p-4 bg-green-50 border border-green-200 rounded-lg';
+                }
+                if (pwaStatusText) {
+                    pwaStatusText.textContent = '✅ Perfeito! O app foi adicionado à tela inicial. Agora você pode ativar as notificações.';
+                }
+                if (activateBtn) {
+                    activateBtn.disabled = false;
+                    activateBtn.className = 'block w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-full text-center transition-colors';
+                }
+            } else {
+                // App ainda não foi adicionado
+                if (pwaStatus) {
+                    pwaStatus.className = 'mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg';
+                    pwaStatus.querySelector('svg').className = 'w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5';
+                    pwaStatus.querySelector('svg path').setAttribute('d', 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 15.5c-.77.833.192 2.5 1.732 2.5z');
+                }
+                if (pwaStatusText) {
+                    pwaStatusText.textContent = '⚠️ Você ainda está no navegador. Siga as instruções acima para adicionar à tela inicial primeiro.';
+                }
+                if (activateBtn) {
+                    activateBtn.disabled = true;
+                    activateBtn.className = 'block w-full bg-gray-400 text-white font-medium py-3 px-6 rounded-full text-center cursor-not-allowed';
+                    activateBtn.textContent = 'Adicione à tela inicial primeiro';
+                }
+            }
+        }
+
+        if (activateBtn) {
+            activateBtn.addEventListener('click', async () => {
+                // Verifica novamente se está em modo standalone
+                if (!window.navigator.standalone && !window.matchMedia('(display-mode: standalone)').matches) {
+                    showIOSFeedback('warning', 'Atenção!', 'Certifique-se de que abriu este app pelo ícone da tela inicial, não pelo navegador.');
+                    return;
+                }
+
+                activateBtn.disabled = true;
+                activateBtn.textContent = 'Ativando...';
+
+                try {
+                    // Verifica se as notificações são suportadas
+                    if (!('Notification' in window)) {
+                        showIOSFeedback('error', 'Não Suportado', 'Seu dispositivo não suporta notificações.');
+                        return;
+                    }
+
+                    // Solicita permissão para notificações
+                    const permission = await Notification.requestPermission();
+
+                    if (permission === 'granted') {
+                        // Cria subscrição push e registra no servidor
+                        await subscribeToPushNotifications();
+                        showIOSFeedback('success', 'Perfeito!', 'Notificações ativadas com sucesso! Você receberá todas as novidades.');
+
+                        // Envia notificação de boas-vindas
+                        setTimeout(async () => {
+                            await sendWelcomeNotification('Bem-vindo!', 'Suas notificações estão ativas. Você receberá todas as promoções!');
+                        }, 1000);
+
+                    } else if (permission === 'denied') {
+                        showIOSFeedback('error', 'Permissão Negada', 'Você negou as notificações. Para ativar, vá em Configurações > Notificações e encontre este app.');
+                    } else {
+                        showIOSFeedback('warning', 'Permissão Pendente', 'A permissão não foi concedida. Tente novamente.');
+                    }
+                } catch (error) {
+                    console.error('Erro ao ativar notificações no iOS:', error);
+                    showIOSFeedback('error', 'Erro', 'Ocorreu um erro ao ativar as notificações. Tente novamente.');
+                } finally {
+                    activateBtn.disabled = false;
+                    activateBtn.textContent = 'Já adicionei à tela inicial';
+                }
+            });
+        }
+
+        /**
+         * Mostra feedback na página de instruções do iOS
+         */
+        function showIOSFeedback(type, title, message) {
+            if (!feedbackDiv || !feedbackIcon || !feedbackTitle || !feedbackMessage) {
+                return;
+            }
+
+            // Esconde as instruções
+            if (instructionsDiv) {
+                instructionsDiv.classList.add('hidden');
+            }
+
+            // Mostra o feedback
+            feedbackDiv.classList.remove('hidden');
+            feedbackTitle.textContent = title;
+            feedbackMessage.textContent = message;
+
+            // Define o ícone baseado no tipo
+            if (type === 'success') {
+                feedbackIcon.className = 'w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-5 bg-green-100';
+                feedbackIcon.innerHTML = `<svg class="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`;
+            } else if (type === 'warning') {
+                feedbackIcon.className = 'w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-5 bg-amber-100';
+                feedbackIcon.innerHTML = `<svg class="w-10 h-10 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 15.5c-.77.833.192 2.5 1.732 2.5z"></path></svg>`;
+            } else {
+                feedbackIcon.className = 'w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-5 bg-red-100';
+                feedbackIcon.innerHTML = `<svg class="w-10 h-10 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+            }
+        }
+    }
+
+    /**
+     * Verifica se deve mostrar instruções do iOS
+     */
+    function checkIOSRedirect() {
+        // Só funciona se estiver na página subscribe.html
+        if (!window.location.pathname.includes('subscribe')) {
+            console.log('❌ Não está na página subscribe, pulando verificação iOS');
+            return;
+        }
+
+        // Verificações individuais para debug
+        const iosDetected = isIOS();
+        const isStandalone = window.navigator.standalone;
+        const isDisplayModeStandalone = window.matchMedia('(display-mode: standalone)').matches;
+        const shouldShowInstructions = iosDetected && !isStandalone && !isDisplayModeStandalone;
+
+        // Verifica se é iOS e está em qualquer navegador (não em modo standalone/PWA)
+        if (shouldShowInstructions) {
+            console.log('✅ Dispositivo iOS detectado em navegador - mostrando instruções');
+            showIOSInstructionsInline();
+        }
+    }
+
+    /**
+     * Mostra as instruções do iOS diretamente na página subscribe.html
+     */
+    function showIOSInstructionsInline() {
+        const initialState = document.getElementById('initial-state');
+        const finalState = document.getElementById('final-state');
+
+        if (!initialState || !finalState) return;
+
+        // Esconde o estado inicial
+        initialState.classList.add('hidden');
+
+        // Mostra as instruções do iOS no lugar do estado final
+        finalState.classList.remove('hidden');
+        finalState.innerHTML = `
+            <div class="text-center mb-6">
+                <div class="w-20 h-20 mx-auto rounded-full bg-blue-100 flex items-center justify-center mb-4">
+                    <svg class="w-10 h-10 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                    </svg>
+                </div>
+                <h1 class="text-2xl font-medium text-slate-800 mb-2">Como ativar notificações no iPhone/iPad</h1>
+                <p class="text-slate-600">Siga estes passos para receber nossas notificações:</p>
+            </div>
+
+            <div class="space-y-4 text-left">
+                <div class="flex items-start space-x-3">
+                    <div class="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0 mt-0.5">1</div>
+                    <div>
+                        <h3 class="font-medium text-slate-800">Adicione à Tela Inicial</h3>
+                        <p class="text-slate-600 text-sm">Toque no botão "Compartilhar" (□↗) no seu navegador e selecione "Adicionar à Tela de Início"</p>
+                    </div>
+                </div>
+
+                <div class="flex items-start space-x-3">
+                    <div class="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0 mt-0.5">2</div>
+                    <div>
+                        <h3 class="font-medium text-slate-800">Abra pelo Ícone</h3>
+                        <p class="text-slate-600 text-sm">Feche o navegador e abra o app pelo ícone que apareceu na tela inicial</p>
+                    </div>
+                </div>
+
+                <div class="flex items-start space-x-3">
+                    <div class="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0 mt-0.5">3</div>
+                    <div>
+                        <h3 class="font-medium text-slate-800">Ative as Notificações</h3>
+                        <p class="text-slate-600 text-sm">Toque em "Ativar Notificações" e permita quando solicitado</p>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Adiciona funcionalidade ao botão de ativar notificações
+        const activateBtn = document.getElementById('activate-notifications-btn-inline');
+        const statusDiv = document.getElementById('pwa-status-inline');
+        const statusText = document.getElementById('pwa-status-text-inline');
+
+        // Verifica periodicamente se o usuário adicionou à tela inicial
+        const checkInterval = setInterval(() => {
+            const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
+            
+            if (isStandalone) {
+                // App foi adicionado à tela inicial
+                clearInterval(checkInterval);
+                
+                if (statusDiv) {
+                    statusDiv.className = 'mt-6 p-4 bg-green-50 border border-green-200 rounded-lg';
+                }
+                if (statusText) {
+                    statusText.textContent = '✅ Perfeito! O app foi adicionado à tela inicial. Agora você pode ativar as notificações.';
+                }
+                if (activateBtn) {
+                    activateBtn.disabled = false;
+                    activateBtn.className = 'block w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-full text-center transition-colors';
+                    activateBtn.textContent = 'Ativar Notificações';
+                    
+                    activateBtn.addEventListener('click', async () => {
+                        activateBtn.disabled = true;
+                        activateBtn.textContent = 'Ativando...';
+
+                        try {
+                            const permission = await Notification.requestPermission();
+                            
+                            if (permission === 'granted') {
+                                await subscribeToPushNotifications();
+                                showFinalState('success', 'Perfeito!', 'Notificações ativadas com sucesso! Você receberá todas as novidades.');
+                                
+                                setTimeout(async () => {
+                                    await sendWelcomeNotification('Bem-vindo!', 'Suas notificações estão ativas. Você receberá todas as promoções!');
+                                }, 1000);
+                                
+                            } else if (permission === 'denied') {
+                                showFinalState('error', 'Permissão Negada', 'Você negou as notificações. Para ativar, vá em Configurações > Notificações e encontre este app.');
+                            } else {
+                                showFinalState('warning', 'Permissão Pendente', 'A permissão não foi concedida. Tente novamente.');
+                            }
+                        } catch (error) {
+                            console.error('Erro ao ativar notificações no iOS:', error);
+                            showFinalState('error', 'Erro', 'Ocorreu um erro ao ativar as notificações. Tente novamente.');
+                        } finally {
+                            activateBtn.disabled = false;
+                            activateBtn.textContent = 'Ativar Notificações';
+                        }
+                    });
+                }
+            }
+        }, 1000); // Verifica a cada segundo
+
+        // Para de verificar após 5 minutos para não consumir recursos desnecessariamente
+        setTimeout(() => {
+            clearInterval(checkInterval);
+        }, 300000);
+    }
 
     /**
      * Inicializa a aplicação
@@ -140,7 +445,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Aguarda o service worker estar pronto
             await navigator.serviceWorker.ready;
             console.log('Service Worker está pronto');
-            
+
         } catch (error) {
             console.error('Falha ao registar o Service Worker:', error);
             showFinalState('error', 'Erro de Instalação', 'Não foi possível iniciar o serviço de notificações.');
@@ -160,11 +465,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error('Notificações não suportadas neste navegador');
             }
 
-            // Para iOS, mostra instruções específicas antes de pedir permissão
-            if (isIOS && isSafari) {
-                showIOSInstructions();
-                return;
-            }
+            // Para iOS em navegador, as instruções já foram mostradas automaticamente
+            // Se chegou até aqui, é porque já está em modo standalone ou não é iOS
 
             const permission = await Notification.requestPermission();
             
@@ -180,8 +482,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch (error) {
             console.error('Erro ao pedir permissão:', error);
-            
-            if (isIOS) {
+            if (isIOS()) {
                 showFinalState('error', 'iOS Detectado', 'No iPhone/iPad, adicione este site à tela inicial primeiro, depois abra pelo ícone para ativar notificações.');
             } else {
                 showFinalState('error', 'Ocorreu um Erro', 'Não foi possível processar sua solicitação. Verifique se seu navegador suporta notificações.');
@@ -278,31 +579,6 @@ document.addEventListener('DOMContentLoaded', () => {
             // Mesmo com erro no servidor, continua o processo local
             // O usuário ainda pode receber notificações locais
         }
-    }
-
-    /**
-     * Mostra instruções específicas para iOS
-     */
-    function showIOSInstructions() {
-        showFinalState('info', 'Instruções para iPhone/iPad', 
-            'Para receber notificações no iOS:\n\n' +
-            '1. Toque no botão "Compartilhar" (□↗) no Safari\n' +
-            '2. Selecione "Adicionar à Tela de Início"\n' +
-            '3. Abra o app pela tela inicial\n' +
-            '4. Toque em "Ativar Notificações" novamente'
-        );
-        
-        // Adiciona botão para tentar novamente
-        setTimeout(() => {
-            const retryBtn = document.createElement('button');
-            retryBtn.textContent = 'Já adicionei à tela inicial';
-            retryBtn.className = 'w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-full text-lg shadow-sm hover:shadow-md transition-all mt-4';
-            retryBtn.onclick = () => {
-                finalStateDiv.classList.add('hidden');
-                initialStateDiv.classList.remove('hidden');
-            };
-            finalStateDiv.appendChild(retryBtn);
-        }, 100);
     }
 
     /**
