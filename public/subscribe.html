@@ -31,15 +31,55 @@
 
     <!-- CSS Personalizado -->
     <link rel="stylesheet" href="/style.css">
+    
+    <style>
+        .status-indicator {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.7;
+            }
+        }
+        
+        .subscription-active {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+        
+        .subscription-inactive {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        }
+        
+        .fade-in-up {
+            animation: fadeInUp 0.6s ease-out forwards;
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
 </head>
 <body class="bg-slate-100 flex justify-center items-center min-h-screen p-4">
 
     <div id="subscription-card" class="text-center w-full max-w-md mx-auto">
         <div id="initial-state" class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
             <header class="mb-6 fade-in-up" style="animation-delay: 0.1s;">
-                <img id="business-logo" src="https://placehold.co/120x120/f1f5f9/1e293b?text=Sua+Logo&font=roboto" 
-                     alt="Logo do Estabelecimento"
-                     class="w-24 h-24 mx-auto rounded-full bg-slate-100">
+                <div class="relative inline-block">
+                    <img id="business-logo" src="https://placehold.co/120x120/f1f5f9/1e293b?text=Sua+Logo&font=roboto" 
+                         alt="Logo do Estabelecimento"
+                         class="w-24 h-24 mx-auto rounded-full bg-slate-100">
+                </div>
             </header>
             <main>
                 <h1 class="text-3xl font-medium text-slate-800 fade-in-up" style="animation-delay: 0.2s;">
