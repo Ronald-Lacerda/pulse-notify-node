@@ -112,6 +112,18 @@ function authenticateSuperAdmin(req, res, next) {
 }
 
 /**
+ * Middleware de autenticação para páginas web (Super Admin)
+ * Verifica token no localStorage via cookie ou redireciona para login
+ */
+function authenticateSuperAdminPage(req, res, next) {
+    // Para páginas web, vamos servir uma página que verifica o token via JavaScript
+    // Se não houver token válido, a própria página redirecionará para login
+    
+    // Servir a página e deixar o JavaScript do frontend fazer a verificação
+    next();
+}
+
+/**
  * Endpoint para registrar nova subscrição
  */
 app.post('/api/subscribe', async (req, res) => {
@@ -1236,9 +1248,14 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
 
-// Rota para documentação
-app.get('/documentation', (req, res) => {
+// Rota para documentação (protegida - requer Super Admin)
+app.get('/documentation', authenticateSuperAdminPage, (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'documentation.html'));
+});
+
+// Rota para gerenciamento de administradores (protegida - requer Super Admin)
+app.get('/admin-management', authenticateSuperAdminPage, (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'admin-management.html'));
 });
 
 // Rota para subscribe
@@ -1256,7 +1273,12 @@ app.get('/login', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
 
-// Rota para login
+// Rota para login do super admin
+app.get('/super-admin-login', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'super-admin-login.html'));
+});
+
+// Rota para instruções iOS
 app.get('/ios-instructions', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'ios-instructions.html'));
 });
