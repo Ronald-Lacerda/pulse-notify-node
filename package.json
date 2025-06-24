@@ -10,7 +10,8 @@
     "generate-vapid": "npx web-push generate-vapid-keys",
     "install-deps": "node install-deps.js",
     "diagnose": "node diagnose.js",
-    "test-server": "node test-server.js"
+    "test-server": "node test-server.js",
+    "test-db": "node scripts/test-connection.js"
   },
   "dependencies": {
     "bcrypt": "^5.1.1",
