@@ -20,106 +20,10 @@
         .method-put { @apply bg-yellow-100 text-yellow-800 border-yellow-200; }
         .protected { @apply bg-orange-50 border-orange-200; }
         .public { @apply bg-green-50 border-green-200; }
-        
-        /* Loading overlay */
-        .loading-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(255, 255, 255, 0.9);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-        }
-        
-        .spinner {
-            border: 4px solid #f3f4f6;
-            border-top: 4px solid #3b82f6;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
     </style>
-    
-    <script>
-        // Verificação de autenticação Super Admin
-        document.addEventListener('DOMContentLoaded', async function() {
-            const loadingOverlay = document.getElementById('loading-overlay');
-            
-            try {
-                const token = localStorage.getItem('super_admin_token');
-                
-                if (!token) {
-                    // Não há token, redirecionar para login
-                    window.location.href = '/super-admin-login.html';
-                    return;
-                }
-                
-                // Verificar se o token é válido
-                const response = await fetch('/api/super-admin/validate', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
-                
-                if (!response.ok) {
-                    // Token inválido, remover e redirecionar
-                    localStorage.removeItem('super_admin_token');
-                    window.location.href = '/super-admin-login.html';
-                    return;
-                }
-                
-                // Token válido, remover loading e mostrar conteúdo
-                loadingOverlay.style.display = 'none';
-                
-            } catch (error) {
-                console.error('Erro na verificação de autenticação:', error);
-                // Em caso de erro, redirecionar para login
-                window.location.href = '/super-admin-login.html';
-            }
-        });
-    </script>
 </head>
 <body class="bg-slate-100 min-h-screen">
-    <!-- Loading Overlay -->
-    <div id="loading-overlay" class="loading-overlay">
-        <div class="text-center">
-            <div class="spinner mx-auto mb-4"></div>
-            <p class="text-slate-600">Verificando autenticação...</p>
-        </div>
-    </div>
     <div class="container mx-auto px-4 py-8">
-        <!-- User Info Header -->
-        <div class="bg-white rounded-lg shadow-sm border border-slate-200 p-4 mb-8">
-            <div class="flex justify-between items-center">
-                <div class="flex items-center space-x-3">
-                    <div class="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center">
-                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
-                        </svg>
-                    </div>
-                    <div>
-                        <p class="text-sm font-medium text-slate-800">Logado como Super Administrador</p>
-                        <p class="text-xs text-slate-500">Acesso total ao sistema</p>
-                    </div>
-                </div>
-                <button onclick="logout()" class="bg-red-600 hover:bg-red-700 text-white text-sm font-medium py-2 px-4 rounded-md transition-colors">
-                    Sair
-                </button>
-            </div>
-        </div>
-        
         <!-- Header -->
         <header class="text-center mb-12">
             <div class="w-20 h-20 mx-auto rounded-full bg-slate-800 flex items-center justify-center mb-6">
@@ -130,12 +34,6 @@
                 Explore todas as páginas e endpoints disponíveis no sistema Pulso. 
                 Clique nos links para acessar diretamente cada rota.
             </p>
-            <div class="mt-4 inline-flex items-center px-3 py-1 rounded-full text-sm bg-purple-100 text-purple-800">
-                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
-                </svg>
-                Área Restrita - Super Admin
-            </div>
         </header>
 
         <!-- Navegação Rápida -->
@@ -251,24 +149,23 @@
                     <div class="space-y-2">
                         <p class="text-xs text-slate-500"><strong>Rota:</strong> /admin-management</p>
                         <p class="text-xs text-slate-500"><strong>Requer:</strong> Autenticação Super Admin</p>
-                        <a href="/admin-management" target="_blank" class="inline-block bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium py-2 px-4 rounded-md transition-colors">
-                            Acessar Gerenciamento
+                        <a href="/super-admin-login.html" target="_blank" class="inline-block bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium py-2 px-4 rounded-md transition-colors">
+                            Acessar Super Admin
                         </a>
                     </div>
                 </div>
 
                 <!-- Documentação (Esta página) -->
-                <div class="route-card bg-white rounded-lg shadow-sm border border-slate-200 p-6 protected border-2 border-purple-300">
+                <div class="route-card bg-white rounded-lg shadow-sm border border-slate-200 p-6 public border-2 border-blue-300">
                     <div class="flex items-center justify-between mb-4">
-                        <span class="px-3 py-1 text-sm font-medium rounded-full bg-purple-100 text-purple-800">Página</span>
-                        <span class="text-xs text-purple-600 font-medium">Atual - Super Admin</span>
+                        <span class="px-3 py-1 text-sm font-medium rounded-full bg-blue-100 text-blue-800">Página</span>
+                        <span class="text-xs text-blue-600 font-medium">Atual</span>
                     </div>
                     <h3 class="text-lg font-semibold text-slate-800 mb-2">Documentação das Rotas</h3>
-                    <p class="text-slate-600 text-sm mb-4">Esta página - documentação completa de todas as rotas do sistema (protegida).</p>
+                    <p class="text-slate-600 text-sm mb-4">Esta página - documentação completa de todas as rotas do sistema.</p>
                     <div class="space-y-2">
                         <p class="text-xs text-slate-500"><strong>Rota:</strong> /documentation</p>
-                        <p class="text-xs text-slate-500"><strong>Requer:</strong> Autenticação Super Admin</p>
-                        <span class="inline-block bg-purple-100 text-purple-800 text-sm font-medium py-2 px-4 rounded-md">
+                        <span class="inline-block bg-blue-100 text-blue-800 text-sm font-medium py-2 px-4 rounded-md">
                             Página Atual
                         </span>
                     </div>
@@ -834,14 +731,6 @@ Content-Type: application/json</code></pre>
                 }
             });
         });
-        
-        // Função de logout
-        function logout() {
-            if (confirm('Tem certeza que deseja sair?')) {
-                localStorage.removeItem('super_admin_token');
-                window.location.href = '/super-admin-login.html';
-            }
-        }
     </script>
 </body>
 </html>
