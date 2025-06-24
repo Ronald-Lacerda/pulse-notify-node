@@ -324,8 +324,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const data = await response.json();
-            updateClickStats(data.stats);
-            
+
+            if (data.success && data.stats) {
+                updateClickStats(data.stats);
+            } else {
+                console.error('Estrutura de dados inválida:', data);
+                showClickStatsError('Dados de estatísticas inválidos.');
+            }
+
         } catch (error) {
             console.error('Erro ao carregar estatísticas de cliques:', error);
             showClickStatsError('Erro ao carregar estatísticas de cliques.');
@@ -366,16 +372,34 @@ document.addEventListener('DOMContentLoaded', () => {
      * Atualiza estatísticas de cliques
      */
     function updateClickStats(stats) {
-        totalLinksEl.textContent = stats.total;
-        totalClicksEl.textContent = stats.clicked;
-        updateClicksTable(stats.recentClicks);
+        console.log('Atualizando estatísticas de cliques:', stats);
+        console.log('totalLinksEl:', totalLinksEl);
+        console.log('totalClicksEl:', totalClicksEl);
+        
+        if (totalLinksEl) {
+            const totalValue = stats.total || 0;
+            totalLinksEl.textContent = totalValue;
+            console.log('Total links atualizado para:', totalValue);
+        } else {
+            console.error('Elemento total-links não encontrado');
+        }
+        
+        if (totalClicksEl) {
+            const clickedValue = stats.clicked || 0;
+            totalClicksEl.textContent = clickedValue;
+            console.log('Total clicks atualizado para:', clickedValue);
+        } else {
+            console.error('Elemento total-clicks não encontrado');
+        }
+        
+        updateClicksTable(stats.recentClicks || []);
     }
 
     /**
      * Atualiza tabela de cliques recentes
      */
     function updateClicksTable(recentClicks) {
-        if (recentClicks.length === 0) {
+        if (!recentClicks || recentClicks.length === 0) {
             clicksTableBody.innerHTML = `
                 <tr>
                     <td colspan="4" class="px-6 py-12 text-center text-slate-500">
@@ -396,18 +420,21 @@ document.addEventListener('DOMContentLoaded', () => {
         clicksTableBody.innerHTML = recentClicks.map(click => `
             <tr class="hover:bg-slate-50/50 transition-colors">
                 <td class="px-6 py-4 text-sm font-mono text-slate-800">
-                    ${click.userId}
+                    ${click.userId || 'N/A'}
                 </td>
                 <td class="px-6 py-4 text-sm text-slate-600">
-                    ${click.notificationTitle}
+                    ${click.notificationTitle || 'N/A'}
                 </td>
                 <td class="px-6 py-4 text-sm">
-                    <a href="${click.originalUrl}" target="_blank" class="text-primary-600 hover:text-primary-700 hover:underline transition-colors">
+                    ${click.originalUrl ? `<a href="${click.originalUrl}" target="_blank" class="text-primary-600 hover:text-primary-700 hover:underline transition-colors">
                         ${click.originalUrl.length > 50 ? click.originalUrl.substring(0, 50) + '...' : click.originalUrl}
-                    </a>
+                    </a>` : '<span class="text-slate-400">N/A</span>'}
                 </td>
-                <td class="px-6 py-4 text-sm text-slate-600">
-                    ${formatDate(click.clickedAt)}
+                <td class="px-6 py-4 text-sm">
+                    ${click.clickedAt ? 
+                        `<span class="text-slate-600">${formatDate(click.clickedAt)}</span>` : 
+                        '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">Não clicado</span>'
+                    }
                 </td>
             </tr>
         `).join('');

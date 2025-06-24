@@ -1221,8 +1221,8 @@ app.get('/api/clicks/stats', authenticateToken, async (req, res) => {
         res.json({
             success: true,
             stats: {
-                total: stats.total,
-                clicked: stats.clicked,
+                total: stats.totalClicks,
+                clicked: stats.clickedCount,
                 clickRate: stats.clickRate,
                 recentClicks: recentClicks.map(click => ({
                     trackingId: click.trackingId,
