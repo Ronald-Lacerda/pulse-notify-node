@@ -63,18 +63,6 @@ class SubscriptionService {
         );
     }
 
-    // Atualizar status da subscrição (ativar/desativar)
-    async updateStatus(userId, active) {
-        return await Subscription.findOneAndUpdate(
-            { userId },
-            {
-                active: active,
-                lastSeen: new Date(),
-            },
-            { new: true }
-        );
-    }
-
     // Contar subscrições por admin
     async countByAdminId(adminId) {
         return await Subscription.countDocuments({ 

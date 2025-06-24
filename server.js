@@ -78,14 +78,13 @@ function authenticateToken(req, res, next) {
  */
 app.post('/api/subscribe', async (req, res) => {
     try {
-        const { userId, adminId, subscription, active, userAgent, timestamp, url, language, platform, timezone } = req.body;
+        const { userId, adminId, subscription, userAgent, timestamp, url, language, platform, timezone } = req.body;
 
         // Debug: log dos dados recebidos
         console.log('=== DEBUG SUBSCRIBE ENDPOINT ===');
         console.log('Dados recebidos:', {
             userId,
             adminId,
-            active,
             url,
             userAgent: userAgent?.substring(0, 50) + '...'
         });
@@ -102,7 +101,6 @@ app.post('/api/subscribe', async (req, res) => {
             userId,
             subscription,
             adminId: adminId || null,
-            active: active !== undefined ? active : true, // Usa o valor enviado ou true por padrão
             userAgent,
             url,
             language,
@@ -112,72 +110,17 @@ app.post('/api/subscribe', async (req, res) => {
 
         await subscriptionService.createOrUpdate(subscriptionData);
 
-        console.log(`Usuário ${userId} registrado/atualizado com sucesso${adminId ? ` (Admin: ${adminId})` : ''} - Status: ${subscriptionData.active ? 'ativo' : 'inativo'}`);
+        console.log(`Usuário ${userId} registrado/atualizado com sucesso${adminId ? ` (Admin: ${adminId})` : ''}`);
 
         res.json({ 
             success: true, 
             message: 'Subscrição registrada com sucesso',
             userId: userId,
-            adminId: adminId,
-            active: subscriptionData.active
+            adminId: adminId
         });
 
     } catch (error) {
         console.error('Erro ao registrar subscrição:', error);
-        res.status(500).json({ 
-            error: 'Erro interno do servidor' 
-        });
-    }
-});
-
-/**
- * Endpoint para atualizar status da subscrição
- */
-app.put('/api/subscription/status', async (req, res) => {
-    try {
-        const { userId, adminId, active, timestamp } = req.body;
-
-        // Debug: log dos dados recebidos
-        console.log('=== DEBUG UPDATE STATUS ENDPOINT ===');
-        console.log('Dados recebidos:', {
-            userId,
-            adminId,
-            active,
-            timestamp
-        });
-        console.log('====================================');
-
-        if (!userId || active === undefined) {
-            return res.status(400).json({ 
-                error: 'userId e active são obrigatórios' 
-            });
-        }
-
-        // Busca a subscrição existente
-        const subscription = await subscriptionService.findByUserId(userId);
-        
-        if (!subscription) {
-            return res.status(404).json({ 
-                error: 'Subscrição não encontrada' 
-            });
-        }
-
-        // Atualiza o status da subscrição
-        const updatedSubscription = await subscriptionService.updateStatus(userId, active);
-
-        console.log(`Status da subscrição do usuário ${userId} atualizado para: ${active ? 'ativo' : 'inativo'}`);
-
-        res.json({ 
-            success: true, 
-            message: `Subscrição ${active ? 'ativada' : 'desativada'} com sucesso`,
-            userId: userId,
-            adminId: adminId,
-            active: active,
-            updatedAt: new Date().toISOString()
-        });
-
-    } catch (error) {
-        console.error('Erro ao atualizar status da subscrição:', error);
         res.status(500).json({ 
             error: 'Erro interno do servidor' 
         });
