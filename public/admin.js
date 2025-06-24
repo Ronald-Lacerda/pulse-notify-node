@@ -195,8 +195,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (adminData) {
             adminNameEl.textContent = adminData.name || adminData.username;
 
-            // Gera o link compartilhável
-            const shareableLink = `${window.location.origin}/subscribe/?admin=${adminData.id}`;
+            // Gera o link compartilhável usando channelId (formato seguro)
+            const shareableLink = `${window.location.origin}/subscribe/?channel=${adminData.channelId}`;
             shareableLinkEl.value = shareableLink;
         }
     }

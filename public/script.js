@@ -40,7 +40,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Gera ou recupera ID único do usuário
     let userId = getUserId();
 
-    // Captura ID do administrador da URL
+    // Captura channelId da URL (novo formato seguro)
+    let channelId = getChannelIdFromURL();
+    
+    // Captura adminId da URL (formato antigo - para compatibilidade)
     let adminId = getAdminIdFromURL();
 
     // Inicialização
@@ -573,6 +576,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify({
                     userId: userId,
                     adminId: adminId,
+                    channelId: channelId,
                     active: active,
                     timestamp: new Date().toISOString()
                 })
@@ -667,14 +671,38 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
-     * Captura ID do administrador da URL
+     * Captura channelId da URL (formato seguro: ?channel=XXXXX)
+     */
+    function getChannelIdFromURL() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const channelId = urlParams.get('channel');
+        
+        if (channelId) {
+            console.log('Channel ID capturado:', channelId);
+            // Salva o channelId no localStorage para futuras referências
+            localStorage.setItem('pulso_channel_id', channelId);
+        } else {
+            // Verifica se já existe um channelId salvo
+            const savedChannelId = localStorage.getItem('pulso_channel_id');
+            if (savedChannelId) {
+                console.log('Channel ID recuperado:', savedChannelId);
+                return savedChannelId;
+            }
+        }
+        
+        return channelId;
+    }
+
+    /**
+     * Captura ID do administrador da URL (formato antigo: ?admin=XXXXX)
+     * Mantido para compatibilidade com links antigos
      */
     function getAdminIdFromURL() {
         const urlParams = new URLSearchParams(window.location.search);
         const adminId = urlParams.get('admin');
         
         if (adminId) {
-            console.log('ID do administrador capturado:', adminId);
+            console.log('ID do administrador capturado (formato antigo):', adminId);
             // Salva o ID do admin no localStorage para futuras referências
             localStorage.setItem('pulso_admin_id', adminId);
         } else {
@@ -817,12 +845,14 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log('=== DEBUG SUBSCRIPTION ===');
             console.log('userId:', userId);
             console.log('adminId:', adminId);
+            console.log('channelId:', channelId);
             console.log('URL atual:', window.location.href);
             console.log('URL params:', window.location.search);
             
             const userInfo = {
                 userId: userId,
-                adminId: adminId, // Inclui o ID do administrador
+                adminId: adminId, // Formato antigo - para compatibilidade
+                channelId: channelId, // Novo formato seguro
                 subscription: subscription,
                 active: true, // Marca como ativo ao se inscrever
                 userAgent: navigator.userAgent,

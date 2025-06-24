@@ -6,6 +6,11 @@ const adminSchema = new mongoose.Schema({
         required: true,
         unique: true
     },
+    channelId: {
+        type: String,
+        required: true,
+        unique: true
+    },
     username: {
         type: String,
         required: true,

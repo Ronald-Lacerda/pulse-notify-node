@@ -8,6 +8,7 @@ const jwt = require('jsonwebtoken');
 // Importar configuração do banco de dados e serviços
 const connectDB = require('./config/database');
 const adminService = require('./services/adminService');
+const superAdminService = require('./services/superAdminService');
 const subscriptionService = require('./services/subscriptionService');
 const notificationService = require('./services/notificationService');
 const clickService = require('./services/clickService');
@@ -17,6 +18,17 @@ const PORT = process.env.PORT;
 
 // Conectar ao MongoDB
 connectDB();
+
+// Executar migração de admins e criar super admin após conectar ao banco
+setTimeout(async () => {
+    try {
+        await adminService.migrateExistingAdmins();
+        await adminService.createDefaultAdmin();
+        await superAdminService.createDefaultSuperAdmin();
+    } catch (error) {
+        console.error('Erro na inicialização dos admins:', error);
+    }
+}, 2000); // Aguarda 2 segundos para garantir que a conexão com o banco esteja estabelecida
 
 // Middleware
 app.use(cors());
@@ -74,17 +86,44 @@ function authenticateToken(req, res, next) {
 }
 
 /**
+ * Middleware de autenticação para Super Admin
+ */
+function authenticateSuperAdmin(req, res, next) {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) {
+        return res.status(401).json({ error: 'Token de acesso requerido' });
+    }
+
+    jwt.verify(token, JWT_SECRET, (err, superAdmin) => {
+        if (err) {
+            return res.status(403).json({ error: 'Token inválido' });
+        }
+        
+        // Verificar se é realmente um super admin
+        if (!superAdmin.isSuperAdmin) {
+            return res.status(403).json({ error: 'Acesso negado: Super Admin requerido' });
+        }
+        
+        req.superAdmin = superAdmin;
+        next();
+    });
+}
+
+/**
  * Endpoint para registrar nova subscrição
  */
 app.post('/api/subscribe', async (req, res) => {
     try {
-        const { userId, adminId, subscription, active, userAgent, timestamp, url, language, platform, timezone } = req.body;
+        const { userId, adminId, channelId, subscription, active, userAgent, timestamp, url, language, platform, timezone } = req.body;
 
         // Debug: log dos dados recebidos
         console.log('=== DEBUG SUBSCRIBE ENDPOINT ===');
         console.log('Dados recebidos:', {
             userId,
             adminId,
+            channelId,
             active,
             url,
             userAgent: userAgent?.substring(0, 50) + '...'
@@ -97,11 +136,25 @@ app.post('/api/subscribe', async (req, res) => {
             });
         }
 
+        // Resolve adminId a partir do channelId se fornecido
+        let resolvedAdminId = adminId;
+        if (channelId && !adminId) {
+            const admin = await adminService.findByChannelId(channelId);
+            if (admin) {
+                resolvedAdminId = admin.adminId;
+                console.log(`🔐 SEGURANÇA: ChannelId ${channelId} resolvido para adminId: ${resolvedAdminId} (Admin: ${admin.name})`);
+            } else {
+                console.log(`⚠️  SEGURANÇA: ChannelId ${channelId} não encontrado - possível tentativa de acesso inválido`);
+            }
+        } else if (adminId && !channelId) {
+            console.log(`⚠️  COMPATIBILIDADE: Usando formato antigo adminId: ${adminId} - recomenda-se migrar para channelId`);
+        }
+
         // Criar ou atualizar subscrição usando o serviço
         const subscriptionData = {
             userId,
             subscription,
-            adminId: adminId || null,
+            adminId: resolvedAdminId || null,
             active: active !== undefined ? active : true, // Usa o valor enviado ou true por padrão
             userAgent,
             url,
@@ -112,13 +165,14 @@ app.post('/api/subscribe', async (req, res) => {
 
         await subscriptionService.createOrUpdate(subscriptionData);
 
-        console.log(`Usuário ${userId} registrado/atualizado com sucesso${adminId ? ` (Admin: ${adminId})` : ''} - Status: ${subscriptionData.active ? 'ativo' : 'inativo'}`);
+        console.log(`Usuário ${userId} registrado/atualizado com sucesso${resolvedAdminId ? ` (Admin: ${resolvedAdminId})` : ''} - Status: ${subscriptionData.active ? 'ativo' : 'inativo'}`);
 
         res.json({ 
             success: true, 
             message: 'Subscrição registrada com sucesso',
             userId: userId,
-            adminId: adminId,
+            adminId: resolvedAdminId,
+            channelId: channelId,
             active: subscriptionData.active
         });
 
@@ -195,6 +249,45 @@ app.get('/api/vapid-public-key', (req, res) => {
     });
 });
 
+/**
+ * Endpoint para validar channelId (útil para debug)
+ */
+app.get('/api/channel/:channelId/validate', async (req, res) => {
+    try {
+        const { channelId } = req.params;
+        
+        if (!channelId) {
+            return res.status(400).json({ 
+                error: 'channelId é obrigatório' 
+            });
+        }
+
+        const admin = await adminService.findByChannelId(channelId);
+        
+        if (!admin || !admin.active) {
+            return res.status(404).json({ 
+                error: 'Canal não encontrado ou inativo' 
+            });
+        }
+
+        res.json({
+            success: true,
+            channel: {
+                channelId: admin.channelId,
+                adminId: admin.adminId,
+                name: admin.name,
+                active: admin.active
+            }
+        });
+
+    } catch (error) {
+        console.error('Erro ao validar channelId:', error);
+        res.status(500).json({ 
+            error: 'Erro interno do servidor' 
+        });
+    }
+});
+
 // ==================== ROTAS DE AUTENTICAÇÃO ====================
 
 /**
@@ -242,6 +335,7 @@ app.post('/api/admin/login', async (req, res) => {
             success: true,
             token: token,
             adminId: admin.adminId,
+            channelId: admin.channelId,
             username: admin.username,
             name: admin.name
         });
@@ -271,6 +365,7 @@ app.post('/api/admin/validate', authenticateToken, async (req, res) => {
             success: true,
             admin: {
                 id: admin.adminId,
+                channelId: admin.channelId,
                 username: admin.username,
                 name: admin.name
             }
@@ -317,12 +412,13 @@ app.post('/api/admin/create', authenticateToken, async (req, res) => {
             active: true
         });
 
-        console.log(`Novo admin criado: ${username} (ID: ${adminId})`);
+        console.log(`Novo admin criado: ${username} (ID: ${adminId}, Channel: ${newAdmin.channelId})`);
 
         res.json({
             success: true,
             message: 'Administrador criado com sucesso',
-            adminId: adminId
+            adminId: adminId,
+            channelId: newAdmin.channelId
         });
 
     } catch (error) {
@@ -345,6 +441,7 @@ app.get('/api/admin/list', authenticateToken, async (req, res) => {
         admins.forEach(admin => {
             safeAdmins[admin.adminId] = {
                 id: admin.adminId,
+                channelId: admin.channelId,
                 username: admin.username,
                 name: admin.name,
                 createdAt: admin.createdAt,
@@ -359,6 +456,257 @@ app.get('/api/admin/list', authenticateToken, async (req, res) => {
 
     } catch (error) {
         console.error('Erro ao listar admins:', error);
+        res.status(500).json({ 
+            error: 'Erro interno do servidor' 
+        });
+    }
+});
+
+/**
+ * Endpoint para ativar/desativar administrador (protegido)
+ */
+app.patch('/api/admin/:adminId/status', authenticateToken, async (req, res) => {
+    try {
+        const { adminId } = req.params;
+        const { active } = req.body;
+
+        if (typeof active !== 'boolean') {
+            return res.status(400).json({ 
+                error: 'Status ativo deve ser um valor booleano' 
+            });
+        }
+
+        // Não permitir desativar o próprio admin
+        if (adminId === req.admin.id && !active) {
+            return res.status(400).json({ 
+                error: 'Não é possível desativar sua própria conta' 
+            });
+        }
+
+        const admin = await adminService.findById(adminId);
+        if (!admin) {
+            return res.status(404).json({ 
+                error: 'Administrador não encontrado' 
+            });
+        }
+
+        // Atualizar status
+        await adminService.updateStatus(adminId, active);
+
+        console.log(`Admin ${adminId} ${active ? 'ativado' : 'desativado'} por ${req.admin.username}`);
+
+        res.json({
+            success: true,
+            message: `Administrador ${active ? 'ativado' : 'desativado'} com sucesso`
+        });
+
+    } catch (error) {
+        console.error('Erro ao atualizar status do admin:', error);
+        res.status(500).json({ 
+            error: 'Erro interno do servidor' 
+        });
+    }
+});
+
+// ==================== ROTAS DE SUPER ADMIN ====================
+
+/**
+ * Endpoint para login de Super Admin
+ */
+app.post('/api/super-admin/login', async (req, res) => {
+    try {
+        const { username, password } = req.body;
+
+        if (!username || !password) {
+            return res.status(400).json({ 
+                error: 'Usuário e senha são obrigatórios' 
+            });
+        }
+
+        const superAdmin = await superAdminService.findByUsername(username);
+
+        if (!superAdmin || !superAdmin.active) {
+            return res.status(401).json({ 
+                error: 'Super Admin não encontrado ou inativo' 
+            });
+        }
+
+        const passwordMatch = await superAdminService.verifyPassword(superAdmin, password);
+        if (!passwordMatch) {
+            return res.status(401).json({ 
+                error: 'Senha incorreta' 
+            });
+        }
+
+        // Gerar token JWT
+        const token = jwt.sign(
+            { 
+                id: superAdmin.superAdminId, 
+                username: superAdmin.username,
+                isSuperAdmin: true
+            }, 
+            JWT_SECRET, 
+            { expiresIn: '24h' }
+        );
+
+        console.log(`🔐 SUPER ADMIN LOGIN: ${username} (ID: ${superAdmin.superAdminId})`);
+
+        res.json({
+            success: true,
+            token: token,
+            superAdmin: {
+                id: superAdmin.superAdminId,
+                username: superAdmin.username,
+                name: superAdmin.name
+            }
+        });
+
+    } catch (error) {
+        console.error('Erro no login do Super Admin:', error);
+        res.status(500).json({ 
+            error: 'Erro interno do servidor' 
+        });
+    }
+});
+
+/**
+ * Endpoint para validar token de Super Admin
+ */
+app.post('/api/super-admin/validate', authenticateSuperAdmin, async (req, res) => {
+    try {
+        res.json({
+            success: true,
+            superAdmin: {
+                id: req.superAdmin.id,
+                username: req.superAdmin.username
+            }
+        });
+    } catch (error) {
+        console.error('Erro na validação do Super Admin:', error);
+        res.status(500).json({ 
+            error: 'Erro interno do servidor' 
+        });
+    }
+});
+
+/**
+ * Endpoint para criar novo administrador (Super Admin)
+ */
+app.post('/api/super-admin/create-admin', authenticateSuperAdmin, async (req, res) => {
+    try {
+        const { username, password, name } = req.body;
+
+        if (!username || !password || !name) {
+            return res.status(400).json({ 
+                error: 'Usuário, senha e nome são obrigatórios' 
+            });
+        }
+
+        // Verifica se o usuário já existe
+        const existingAdmin = await adminService.findByUsername(username);
+        if (existingAdmin) {
+            return res.status(400).json({ 
+                error: 'Usuário já existe' 
+            });
+        }
+
+        // Gera ID único
+        const adminId = 'admin_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        
+        // Cria novo admin
+        const newAdmin = await adminService.create({
+            adminId,
+            username,
+            password,
+            name,
+            active: true
+        });
+
+        console.log(`🔐 SUPER ADMIN: Novo admin criado por ${req.superAdmin.username}: ${username} (ID: ${adminId}, Channel: ${newAdmin.channelId})`);
+
+        res.json({
+            success: true,
+            message: 'Administrador criado com sucesso',
+            adminId: adminId,
+            channelId: newAdmin.channelId
+        });
+
+    } catch (error) {
+        console.error('Erro ao criar admin via Super Admin:', error);
+        res.status(500).json({ 
+            error: 'Erro interno do servidor' 
+        });
+    }
+});
+
+/**
+ * Endpoint para listar administradores (Super Admin)
+ */
+app.get('/api/super-admin/admins', authenticateSuperAdmin, async (req, res) => {
+    try {
+        const admins = await adminService.findAll();
+
+        // Converte para o formato esperado pelo frontend
+        const safeAdmins = {};
+        admins.forEach(admin => {
+            safeAdmins[admin.adminId] = {
+                id: admin.adminId,
+                channelId: admin.channelId,
+                username: admin.username,
+                name: admin.name,
+                createdAt: admin.createdAt,
+                active: admin.active
+            };
+        });
+
+        console.log(`🔐 SUPER ADMIN: Lista de admins acessada por ${req.superAdmin.username}`);
+
+        res.json({
+            success: true,
+            admins: safeAdmins
+        });
+
+    } catch (error) {
+        console.error('Erro ao listar admins via Super Admin:', error);
+        res.status(500).json({ 
+            error: 'Erro interno do servidor' 
+        });
+    }
+});
+
+/**
+ * Endpoint para ativar/desativar administrador (Super Admin)
+ */
+app.patch('/api/super-admin/admin/:adminId/status', authenticateSuperAdmin, async (req, res) => {
+    try {
+        const { adminId } = req.params;
+        const { active } = req.body;
+
+        if (typeof active !== 'boolean') {
+            return res.status(400).json({ 
+                error: 'Status ativo deve ser um valor booleano' 
+            });
+        }
+
+        const admin = await adminService.findById(adminId);
+        if (!admin) {
+            return res.status(404).json({ 
+                error: 'Administrador não encontrado' 
+            });
+        }
+
+        // Atualizar status
+        await adminService.updateStatus(adminId, active);
+
+        console.log(`🔐 SUPER ADMIN: Admin ${adminId} ${active ? 'ativado' : 'desativado'} por ${req.superAdmin.username}`);
+
+        res.json({
+            success: true,
+            message: `Administrador ${active ? 'ativado' : 'desativado'} com sucesso`
+        });
+
+    } catch (error) {
+        console.error('Erro ao atualizar status do admin via Super Admin:', error);
         res.status(500).json({ 
             error: 'Erro interno do servidor' 
         });
@@ -918,10 +1266,10 @@ async function startServer() {
     try {
         // Conecta ao MongoDB
         await connectDB();
-        
+
         // Cria admin padrão se não existir
         await adminService.createDefaultAdmin();
-        
+
         app.listen(PORT, () => {
             console.log(`Servidor rodando na porta ${PORT}`);
             console.log(`Acesse: http://localhost:${PORT}`);
@@ -943,12 +1291,19 @@ async function startServer() {
             console.log('- POST /api/admin/validate (protegido)');
             console.log('- POST /api/admin/create (protegido)');
             console.log('- GET  /api/admin/list (protegido)');
+            console.log('\n🔒 APIs de Super Admin:');
+            console.log('- POST /api/super-admin/login');
+            console.log('- POST /api/super-admin/validate (protegido)');
+            console.log('- POST /api/super-admin/create-admin (protegido)');
+            console.log('- GET  /api/super-admin/admins (protegido)');
+            console.log('- PATCH /api/super-admin/admin/:adminId/status (protegido)');
             console.log('\n🛡️  APIs protegidas (requerem autenticação):');
             console.log('- GET  /api/users');
             console.log('- DELETE /api/users/:userId');
             console.log('- POST /api/notify/:userId');
             console.log('- POST /api/notify-all');
-            console.log('\n💡 Credenciais padrão: admin / admin123');
+            console.log('\n💡 Credenciais padrão Admin: admin / admin123');
+            console.log('💡 Credenciais padrão Super Admin: superadmin / SuperAdmin@2024!');
             console.log('\n🗄️  Banco de dados: MongoDB conectado com sucesso!');
         });
         
