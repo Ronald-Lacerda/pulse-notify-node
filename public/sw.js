@@ -11,11 +11,9 @@ const urlsToCache = [
 
 // Instalação do Service Worker
 self.addEventListener('install', (event) => {
-  console.log('Service Worker: Instalando...');
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
-        console.log('Service Worker: Cache aberto');
         // Tenta adicionar todos os arquivos ao cache, mas não falha se algum não existir
         return Promise.allSettled(
           urlsToCache.map(url => 
@@ -27,7 +25,6 @@ self.addEventListener('install', (event) => {
         );
       })
       .then(() => {
-        console.log('Service Worker: Instalação concluída');
         // Força a ativação imediata do novo service worker
         return self.skipWaiting();
       })
@@ -41,21 +38,18 @@ self.addEventListener('install', (event) => {
 
 // Ativação do Service Worker
 self.addEventListener('activate', (event) => {
-  console.log('Service Worker: Ativando...');
   event.waitUntil(
     caches.keys()
       .then((cacheNames) => {
         return Promise.all(
           cacheNames.map((cacheName) => {
             if (cacheName !== CACHE_NAME) {
-              console.log('Service Worker: Removendo cache antigo:', cacheName);
               return caches.delete(cacheName);
             }
           })
         );
       })
       .then(() => {
-        console.log('Service Worker: Ativação concluída');
         // Toma controle de todas as páginas imediatamente
         return self.clients.claim();
       })
@@ -79,11 +73,9 @@ self.addEventListener('fetch', (event) => {
       .then((response) => {
         // Retorna do cache se encontrado, senão busca na rede
         if (response) {
-          console.log('Service Worker: Servindo do cache:', event.request.url);
           return response;
         }
         
-        console.log('Service Worker: Buscando na rede:', event.request.url);
         
         // Tenta buscar na rede com tratamento de erro
         return fetch(event.request)
@@ -99,7 +91,6 @@ self.addEventListener('fetch', (event) => {
             return networkResponse;
           })
           .catch((error) => {
-            console.log('Service Worker: Erro na requisição de rede:', error);
             
             // Se for uma requisição de navegação (página HTML), retorna uma página offline
             if (event.request.destination === 'document') {
@@ -187,7 +178,6 @@ self.addEventListener('fetch', (event) => {
           });
       })
       .catch((error) => {
-        console.log('Service Worker: Erro geral no fetch:', error);
         
         // Fallback final para qualquer erro não tratado
         return new Response(
@@ -210,7 +200,6 @@ self.addEventListener('fetch', (event) => {
 
 // Manipulação de notificações push
 self.addEventListener('push', (event) => {
-  console.log('Service Worker: Notificação push recebida');
   
   let notificationData = {
     title: 'Nova Notificação',
@@ -239,7 +228,6 @@ self.addEventListener('push', (event) => {
       const pushData = event.data.json();
       notificationData = { ...notificationData, ...pushData };
     } catch (error) {
-      console.log('Service Worker: Erro ao parsear dados push:', error);
     }
   }
 
@@ -261,7 +249,6 @@ self.addEventListener('push', (event) => {
 
 // Manipulação de cliques em notificações
 self.addEventListener('notificationclick', (event) => {
-  console.log('Service Worker: Clique na notificação:', event.notification.tag);
   
   event.notification.close();
 
@@ -294,7 +281,6 @@ self.addEventListener('notificationclick', (event) => {
 
 // Manipulação de fechamento de notificações
 self.addEventListener('notificationclose', (event) => {
-  console.log('Service Worker: Notificação fechada:', event.notification.tag);
   
   // Aqui você pode enviar analytics ou fazer outras ações
   // quando o usuário fechar a notificação sem clicar
@@ -302,19 +288,16 @@ self.addEventListener('notificationclose', (event) => {
 
 // Sincronização em background (para quando voltar online)
 self.addEventListener('sync', (event) => {
-  console.log('Service Worker: Evento de sincronização:', event.tag);
   
   if (event.tag === 'background-sync') {
     event.waitUntil(
       // Aqui você pode sincronizar dados quando voltar online
-      console.log('Service Worker: Executando sincronização em background')
     );
   }
 });
 
 // Manipulação de mensagens do cliente
 self.addEventListener('message', (event) => {
-  console.log('Service Worker: Mensagem recebida:', event.data);
   
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();

@@ -209,7 +209,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function checkIOSRedirect() {
         // Só funciona se estiver na página subscribe.html
         if (!window.location.pathname.includes('subscribe')) {
-            console.log('❌ Não está na página subscribe, pulando verificação iOS');
             return;
         }
 
@@ -221,7 +220,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Verifica se é iOS e está em qualquer navegador (não em modo standalone/PWA)
         if (shouldShowInstructions) {
-            console.log('✅ Dispositivo iOS detectado em navegador - mostrando instruções');
             showIOSInstructionsInline();
         }
     }
@@ -552,7 +550,6 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (subscription) {
                 const success = await subscription.unsubscribe();
-                console.log('Subscrição removida do service worker:', success);
                 return success;
             }
             
@@ -587,7 +584,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const result = await response.json();
-            console.log('Status atualizado no servidor:', result);
             return result;
             
         } catch (error) {
@@ -602,7 +598,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function clearLocalSubscriptionData() {
         localStorage.removeItem('pulso_subscription_registered');
         localStorage.removeItem('pulso_registration_date');
-        console.log('Dados locais da inscrição removidos');
     }
 
     /**
@@ -647,7 +642,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             const data = await response.json();
             VAPID_PUBLIC_KEY = data.publicKey;
-            console.log('Chave VAPID carregada com sucesso');
         } catch (error) {
             console.error('Erro ao carregar chave VAPID:', error);
             throw error;
@@ -663,9 +657,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Gera um ID único baseado em timestamp + random
             id = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
             localStorage.setItem('pulso_user_id', id);
-            console.log('Novo usuário criado:', id);
         } else {
-            console.log('Usuário existente:', id);
         }
         return id;
     }
@@ -678,14 +670,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const channelId = urlParams.get('channel');
         
         if (channelId) {
-            console.log('Channel ID capturado:', channelId);
             // Salva o channelId no localStorage para futuras referências
             localStorage.setItem('pulso_channel_id', channelId);
         } else {
             // Verifica se já existe um channelId salvo
             const savedChannelId = localStorage.getItem('pulso_channel_id');
             if (savedChannelId) {
-                console.log('Channel ID recuperado:', savedChannelId);
                 return savedChannelId;
             }
         }
@@ -702,14 +692,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const adminId = urlParams.get('admin');
         
         if (adminId) {
-            console.log('ID do administrador capturado (formato antigo):', adminId);
             // Salva o ID do admin no localStorage para futuras referências
             localStorage.setItem('pulso_admin_id', adminId);
         } else {
             // Verifica se já existe um admin ID salvo
             const savedAdminId = localStorage.getItem('pulso_admin_id');
             if (savedAdminId) {
-                console.log('ID do administrador recuperado:', savedAdminId);
                 return savedAdminId;
             }
         }
@@ -749,11 +737,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 scope: '/'
             });
             
-            console.log('Service Worker registado com sucesso:', registration);
             
             // Aguarda o service worker estar pronto
             await navigator.serviceWorker.ready;
-            console.log('Service Worker está pronto');
 
         } catch (error) {
             console.error('Falha ao registar o Service Worker:', error);
@@ -822,9 +808,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     userVisibleOnly: true,
                     applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
                 });
-                console.log('Nova subscrição criada:', subscription);
             } else {
-                console.log('Subscrição existente encontrada:', subscription);
             }
 
             // Registra a subscrição no servidor
@@ -842,12 +826,6 @@ document.addEventListener('DOMContentLoaded', () => {
     async function registerSubscriptionOnServer(subscription) {
         try {
             // Debug: verificar valores antes de enviar
-            console.log('=== DEBUG SUBSCRIPTION ===');
-            console.log('userId:', userId);
-            console.log('adminId:', adminId);
-            console.log('channelId:', channelId);
-            console.log('URL atual:', window.location.href);
-            console.log('URL params:', window.location.search);
             
             const userInfo = {
                 userId: userId,
@@ -864,8 +842,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
             };
 
-            console.log('Dados sendo enviados:', userInfo);
-            console.log('=========================');
 
             const response = await fetch(`${SERVER_URL}/api/subscribe`, {
                 method: 'POST',
@@ -880,7 +856,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const result = await response.json();
-            console.log('Usuário registrado no servidor:', result);
             
             // Salva informações localmente
             localStorage.setItem('pulso_subscription_registered', 'true');
@@ -916,7 +891,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 });
                 
-                console.log('Notificação de boas-vindas enviada');
             } catch (error) {
                 console.error('Erro ao mostrar notificação via SW:', error);
                 
@@ -982,7 +956,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Detecta se o app foi aberto como PWA (standalone mode)
     if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
-        console.log('App aberto em modo standalone (PWA)');
         // Adiciona classe para indicar que está em modo PWA
         document.body.classList.add('pwa-mode');
     }
@@ -990,7 +963,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Escuta mudanças no status do service worker
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.addEventListener('controllerchange', () => {
-            console.log('Service Worker controller mudou');
         });
     }
 });
