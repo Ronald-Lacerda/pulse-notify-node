@@ -17,9 +17,6 @@ const logService = require('./services/logService');
 const app = express();
 const PORT = process.env.PORT;
 
-// Conectar ao MongoDB
-connectDB();
-
 // Executar migração de admins e criar super admin após conectar ao banco
 setTimeout(async () => {
     try {
