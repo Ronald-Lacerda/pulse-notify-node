@@ -12,6 +12,7 @@ const superAdminService = require('./services/superAdminService');
 const subscriptionService = require('./services/subscriptionService');
 const notificationService = require('./services/notificationService');
 const clickService = require('./services/clickService');
+const logService = require('./services/logService');
 
 const app = express();
 const PORT = process.env.PORT;
@@ -34,6 +35,17 @@ setTimeout(async () => {
 app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
+
+// Middleware de timeout global para APIs
+app.use('/api', (req, res, next) => {
+    // Timeout de 30 segundos para todas as rotas da API
+    req.setTimeout(30000, () => {
+        const err = new Error('Request timeout');
+        err.status = 408;
+        next(err);
+    });
+    next();
+});
 
 // Configuração VAPID (você precisa gerar essas chaves)
 // Execute: npx web-push generate-vapid-keys
@@ -130,17 +142,7 @@ app.post('/api/subscribe', async (req, res) => {
     try {
         const { userId, adminId, channelId, subscription, active, userAgent, timestamp, url, language, platform, timezone } = req.body;
 
-        // Debug: log dos dados recebidos
-        console.log('=== DEBUG SUBSCRIBE ENDPOINT ===');
-        console.log('Dados recebidos:', {
-            userId,
-            adminId,
-            channelId,
-            active,
-            url,
-            userAgent: userAgent?.substring(0, 50) + '...'
-        });
-        console.log('================================');
+
 
         if (!userId || !subscription) {
             return res.status(400).json({ 
@@ -154,12 +156,22 @@ app.post('/api/subscribe', async (req, res) => {
             const admin = await adminService.findByChannelId(channelId);
             if (admin) {
                 resolvedAdminId = admin.adminId;
-                console.log(`🔐 SEGURANÇA: ChannelId ${channelId} resolvido para adminId: ${resolvedAdminId} (Admin: ${admin.name})`);
+                // Log de segurança - resolução de channelId
+                await logService.security(
+                    `ChannelId ${channelId} resolvido para adminId: ${resolvedAdminId} (Admin: ${admin.name})`,
+                    'subscription',
+                    { channelId, adminId: resolvedAdminId, adminName: admin.name }
+                );
             } else {
-                console.log(`⚠️  SEGURANÇA: ChannelId ${channelId} não encontrado - possível tentativa de acesso inválido`);
+                // Log de segurança importante - tentativa de acesso inválido
+                await logService.security(
+                    `ChannelId ${channelId} não encontrado - possível tentativa de acesso inválido`,
+                    'subscription',
+                    { channelId, ip: req.ip, userAgent: req.get('User-Agent') }
+                );
             }
         } else if (adminId && !channelId) {
-            console.log(`⚠️  COMPATIBILIDADE: Usando formato antigo adminId: ${adminId} - recomenda-se migrar para channelId`);
+            // Compatibilidade com formato antigo
         }
 
         // Criar ou atualizar subscrição usando o serviço
@@ -176,8 +188,6 @@ app.post('/api/subscribe', async (req, res) => {
         };
 
         await subscriptionService.createOrUpdate(subscriptionData);
-
-        console.log(`Usuário ${userId} registrado/atualizado com sucesso${resolvedAdminId ? ` (Admin: ${resolvedAdminId})` : ''} - Status: ${subscriptionData.active ? 'ativo' : 'inativo'}`);
 
         res.json({ 
             success: true, 
@@ -203,15 +213,7 @@ app.put('/api/subscription/status', async (req, res) => {
     try {
         const { userId, adminId, active, timestamp } = req.body;
 
-        // Debug: log dos dados recebidos
-        console.log('=== DEBUG UPDATE STATUS ENDPOINT ===');
-        console.log('Dados recebidos:', {
-            userId,
-            adminId,
-            active,
-            timestamp
-        });
-        console.log('====================================');
+
 
         if (!userId || active === undefined) {
             return res.status(400).json({ 
@@ -230,8 +232,6 @@ app.put('/api/subscription/status', async (req, res) => {
 
         // Atualiza o status da subscrição
         const updatedSubscription = await subscriptionService.updateStatus(userId, active);
-
-        console.log(`Status da subscrição do usuário ${userId} atualizado para: ${active ? 'ativo' : 'inativo'}`);
 
         res.json({ 
             success: true, 
@@ -341,7 +341,14 @@ app.post('/api/admin/login', async (req, res) => {
             { expiresIn: '24h' }
         );
 
-        console.log(`Admin ${username} fez login com sucesso`);
+        // Log importante de login - salvar no banco
+        await logService.logWithAdmin(
+            'info',
+            `Admin ${username} fez login com sucesso`,
+            'auth',
+            admin.adminId,
+            { username, ip: req.ip, userAgent: req.get('User-Agent') }
+        );
 
         res.json({
             success: true,
@@ -424,7 +431,19 @@ app.post('/api/admin/create', authenticateToken, async (req, res) => {
             active: true
         });
 
-        console.log(`Novo admin criado: ${username} (ID: ${adminId}, Channel: ${newAdmin.channelId})`);
+        // Log importante de criação de admin - salvar no banco
+        await logService.logWithAdmin(
+            'info',
+            `Novo admin criado: ${username} (ID: ${adminId}, Channel: ${newAdmin.channelId})`,
+            'admin',
+            req.admin.id,
+            { 
+                newAdminId: adminId, 
+                newAdminUsername: username, 
+                channelId: newAdmin.channelId,
+                createdBy: req.admin.username
+            }
+        );
 
         res.json({
             success: true,
@@ -505,7 +524,18 @@ app.patch('/api/admin/:adminId/status', authenticateToken, async (req, res) => {
         // Atualizar status
         await adminService.updateStatus(adminId, active);
 
-        console.log(`Admin ${adminId} ${active ? 'ativado' : 'desativado'} por ${req.admin.username}`);
+        // Log importante de alteração de status - salvar no banco
+        await logService.logWithAdmin(
+            'info',
+            `Admin ${adminId} ${active ? 'ativado' : 'desativado'} por ${req.admin.username}`,
+            'admin',
+            req.admin.id,
+            { 
+                targetAdminId: adminId, 
+                newStatus: active,
+                changedBy: req.admin.username
+            }
+        );
 
         res.json({
             success: true,
@@ -561,7 +591,17 @@ app.post('/api/super-admin/login', async (req, res) => {
             { expiresIn: '24h' }
         );
 
-        console.log(`🔐 SUPER ADMIN LOGIN: ${username} (ID: ${superAdmin.superAdminId})`);
+        // Log importante de login de super admin - salvar no banco
+        await logService.security(
+            `Super Admin login: ${username} (ID: ${superAdmin.superAdminId})`,
+            'auth',
+            { 
+                superAdminId: superAdmin.superAdminId,
+                username,
+                ip: req.ip,
+                userAgent: req.get('User-Agent')
+            }
+        );
 
         res.json({
             success: true,
@@ -634,7 +674,18 @@ app.post('/api/super-admin/create-admin', authenticateSuperAdmin, async (req, re
             active: true
         });
 
-        console.log(`🔐 SUPER ADMIN: Novo admin criado por ${req.superAdmin.username}: ${username} (ID: ${adminId}, Channel: ${newAdmin.channelId})`);
+        // Log importante de criação de admin por super admin - salvar no banco
+        await logService.security(
+            `Super Admin: Novo admin criado por ${req.superAdmin.username}: ${username} (ID: ${adminId}, Channel: ${newAdmin.channelId})`,
+            'admin',
+            { 
+                superAdminId: req.superAdmin.id,
+                superAdminUsername: req.superAdmin.username,
+                newAdminId: adminId,
+                newAdminUsername: username,
+                channelId: newAdmin.channelId
+            }
+        );
 
         res.json({
             success: true,
@@ -671,7 +722,7 @@ app.get('/api/super-admin/admins', authenticateSuperAdmin, async (req, res) => {
             };
         });
 
-        console.log(`🔐 SUPER ADMIN: Lista de admins acessada por ${req.superAdmin.username}`);
+        // Log de acesso à lista de admins por super admin
 
         res.json({
             success: true,
@@ -710,7 +761,17 @@ app.patch('/api/super-admin/admin/:adminId/status', authenticateSuperAdmin, asyn
         // Atualizar status
         await adminService.updateStatus(adminId, active);
 
-        console.log(`🔐 SUPER ADMIN: Admin ${adminId} ${active ? 'ativado' : 'desativado'} por ${req.superAdmin.username}`);
+        // Log importante de alteração de status por super admin - salvar no banco
+        await logService.security(
+            `Super Admin: Admin ${adminId} ${active ? 'ativado' : 'desativado'} por ${req.superAdmin.username}`,
+            'admin',
+            { 
+                superAdminId: req.superAdmin.id,
+                superAdminUsername: req.superAdmin.username,
+                targetAdminId: adminId,
+                newStatus: active
+            }
+        );
 
         res.json({
             success: true,
@@ -721,6 +782,90 @@ app.patch('/api/super-admin/admin/:adminId/status', authenticateSuperAdmin, asyn
         console.error('Erro ao atualizar status do admin via Super Admin:', error);
         res.status(500).json({ 
             error: 'Erro interno do servidor' 
+        });
+    }
+});
+
+/**
+ * Endpoint para visualizar logs do sistema (Super Admin)
+ */
+app.get('/api/super-admin/logs', authenticateSuperAdmin, async (req, res) => {
+    // Definir timeout para a requisição
+    req.setTimeout(30000); // 30 segundos
+    
+    try {
+        const { 
+            category, 
+            level, 
+            adminId, 
+            userId, 
+            days, 
+            page = 1, 
+            limit = 50 
+        } = req.query;
+
+        // Usar nova função paginada para melhor performance
+        const result = await logService.findWithPagination({
+            category,
+            level,
+            adminId,
+            userId,
+            days
+        }, parseInt(page), parseInt(limit));
+
+        res.json({
+            success: true,
+            ...result
+        });
+
+    } catch (error) {
+        console.error('Erro ao buscar logs:', error);
+        
+        // Verificar se é erro de timeout
+        if (error.name === 'MongooseError' && error.message.includes('timeout')) {
+            res.status(408).json({ 
+                error: 'Timeout na consulta de logs. Tente usar filtros mais específicos ou reduza o limite.',
+                code: 'TIMEOUT'
+            });
+        } else {
+            res.status(500).json({ 
+                error: 'Erro ao buscar logs',
+                code: 'INTERNAL_ERROR'
+            });
+        }
+    }
+});
+
+/**
+ * Endpoint para limpar logs antigos (Super Admin)
+ */
+app.delete('/api/super-admin/logs/cleanup', authenticateSuperAdmin, async (req, res) => {
+    try {
+        const { daysToKeep = 30 } = req.body;
+        const deletedCount = await logService.cleanOldLogs(parseInt(daysToKeep));
+
+        // Log da limpeza
+        await logService.security(
+            `Limpeza de logs executada por ${req.superAdmin.username}: ${deletedCount} logs removidos (mantidos últimos ${daysToKeep} dias)`,
+            'system',
+            { 
+                superAdminId: req.superAdmin.id,
+                superAdminUsername: req.superAdmin.username,
+                deletedCount,
+                daysToKeep
+            }
+        );
+
+        res.json({
+            success: true,
+            message: `${deletedCount} logs antigos removidos`,
+            deletedCount: deletedCount
+        });
+
+    } catch (error) {
+        console.error('Erro ao limpar logs:', error);
+        res.status(500).json({ 
+            error: 'Erro ao limpar logs' 
         });
     }
 });
@@ -801,7 +946,17 @@ app.delete('/api/users/:userId', authenticateToken, async (req, res) => {
 
         await subscriptionService.deactivate(userId);
 
-        console.log(`Usuário ${userId} removido por admin ${req.admin.username}`);
+        // Log importante de remoção de usuário - salvar no banco
+        await logService.logWithAdmin(
+            'info',
+            `Usuário ${userId} removido por admin ${req.admin.username}`,
+            'subscription',
+            req.admin.id,
+            { 
+                removedUserId: userId,
+                removedBy: req.admin.username
+            }
+        );
 
         res.json({ 
             success: true, 
@@ -895,7 +1050,6 @@ app.post('/api/notify-all', authenticateToken, async (req, res) => {
                 // Se a subscrição é inválida, marca como inativa
                 if (error.statusCode === 410 || error.statusCode === 404) {
                     await subscriptionService.deactivate(subscription.userId);
-                    console.log(`Usuário ${subscription.userId} marcado como inativo`);
                 }
             }
         });
@@ -917,7 +1071,22 @@ app.post('/api/notify-all', authenticateToken, async (req, res) => {
             trackingIds
         });
 
-        console.log(`Notificação enviada por admin ${req.admin.username} para seus usuários: ${sent} sucessos, ${failed} falhas${trackingIds.length > 0 ? ` (${trackingIds.length} links de rastreamento criados)` : ''}`);
+        // Log importante de envio de notificação - salvar no banco
+        await logService.logWithAdmin(
+            'info',
+            `Notificação enviada por admin ${req.admin.username} para seus usuários: ${sent} sucessos, ${failed} falhas${trackingIds.length > 0 ? ` (${trackingIds.length} links de rastreamento criados)` : ''}`,
+            'notification',
+            req.admin.id,
+            { 
+                notificationId,
+                title,
+                sent,
+                failed,
+                totalUsers: subscriptions.length,
+                trackingLinksCreated: trackingIds.length,
+                hasUrl: !!url
+            }
+        );
 
         res.json({
             success: true,
@@ -1064,7 +1233,6 @@ app.post('/api/notifications/:notificationId/resend', authenticateToken, async (
                 // Se a subscrição é inválida, marca como inativa
                 if (error.statusCode === 410 || error.statusCode === 404) {
                     await subscriptionService.deactivate(subscription.userId);
-                    console.log(`Usuário ${subscription.userId} marcado como inativo`);
                 }
             }
         });
@@ -1088,7 +1256,22 @@ app.post('/api/notifications/:notificationId/resend', authenticateToken, async (
             originalNotificationId: notificationId
         });
 
-        console.log(`Notificação reenviada por admin ${req.admin.username}: ${sent} sucessos, ${failed} falhas`);
+        // Log importante de reenvio de notificação - salvar no banco
+        await logService.logWithAdmin(
+            'info',
+            `Notificação reenviada por admin ${req.admin.username}: ${sent} sucessos, ${failed} falhas`,
+            'notification',
+            req.admin.id,
+            { 
+                originalNotificationId: notificationId,
+                newNotificationId,
+                title,
+                sent,
+                failed,
+                totalUsers: subscriptions.length,
+                isResend: true
+            }
+        );
 
         res.json({
             success: true,
@@ -1138,7 +1321,7 @@ app.get('/track/:trackingId', async (req, res) => {
                 ip: req.ip || req.connection.remoteAddress
             });
             
-            console.log(`Clique registrado: ${trackingId} -> ${click.originalUrl} (usuário: ${click.userId})`);
+            // Log importante de clique registrado - manter para auditoria
         }
 
         // Página de redirecionamento imperceptível
@@ -1295,38 +1478,6 @@ async function startServer() {
         app.listen(PORT, () => {
             console.log(`Servidor rodando na porta ${PORT}`);
             console.log(`Acesse: http://localhost:${PORT}`);
-            console.log('\n📚 DOCUMENTAÇÃO DAS ROTAS:');
-            console.log(`🔗 http://localhost:${PORT}/documentation`);
-            console.log('\n📄 Páginas disponíveis:');
-            console.log('- GET  / (página principal)');
-            console.log('- GET  /subscribe (página de inscrição)');
-            console.log('- GET  /login.html (login administrativo)');
-            console.log('- GET  /admin.html (painel administrativo)');
-            console.log('- GET  /test-auth.html (teste de autenticação)');
-            console.log('- GET  /ios-instructions.html (instruções iOS)');
-            console.log('- GET  /main.html (documentação das rotas)');
-            console.log('\n🔌 APIs públicas:');
-            console.log('- GET  /api/vapid-public-key');
-            console.log('- POST /api/subscribe');
-            console.log('\n🔐 APIs de autenticação:');
-            console.log('- POST /api/admin/login');
-            console.log('- POST /api/admin/validate (protegido)');
-            console.log('- POST /api/admin/create (protegido)');
-            console.log('- GET  /api/admin/list (protegido)');
-            console.log('\n🔒 APIs de Super Admin:');
-            console.log('- POST /api/super-admin/login');
-            console.log('- POST /api/super-admin/validate (protegido)');
-            console.log('- POST /api/super-admin/create-admin (protegido)');
-            console.log('- GET  /api/super-admin/admins (protegido)');
-            console.log('- PATCH /api/super-admin/admin/:adminId/status (protegido)');
-            console.log('\n🛡️  APIs protegidas (requerem autenticação):');
-            console.log('- GET  /api/users');
-            console.log('- DELETE /api/users/:userId');
-            console.log('- POST /api/notify/:userId');
-            console.log('- POST /api/notify-all');
-            console.log('\n💡 Credenciais padrão Admin: admin / admin123');
-            console.log('💡 Credenciais padrão Super Admin: superadmin / SuperAdmin@2024!');
-            console.log('\n🗄️  Banco de dados: MongoDB conectado com sucesso!');
         });
         
     } catch (error) {
@@ -1336,5 +1487,22 @@ async function startServer() {
 }
 
 startServer();
+
+// Handler de erro global para timeouts
+app.use((err, req, res, next) => {
+    if (err.status === 408 || err.message === 'Request timeout') {
+        res.status(408).json({
+            error: 'Request timeout - A operação demorou mais que o esperado',
+            code: 'TIMEOUT',
+            suggestion: 'Tente novamente com filtros mais específicos'
+        });
+    } else {
+        console.error('Erro não tratado:', err);
+        res.status(500).json({
+            error: 'Erro interno do servidor',
+            code: 'INTERNAL_ERROR'
+        });
+    }
+});
 
 module.exports = app;
