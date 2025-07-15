@@ -1,12 +1,272 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" class="scroll-smooth">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pulso</title>
+    <title>Pulso - Aplicação Interativa</title>
     <link rel="icon" type="image/png" href="img/icone-pulso.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f8f9fa;
+            color: #475569;
+        }
+        .card {
+            @apply bg-white p-8 rounded-2xl shadow-sm border border-slate-200 transition-shadow duration-300 hover:shadow-md;
+        }
+        .interactive-step {
+            @apply cursor-pointer border-2 border-transparent p-4 rounded-lg transition-all duration-300;
+        }
+        .interactive-step.active {
+            @apply border-blue-500 bg-blue-50 shadow-lg;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 350px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+        .pulse-logo-outer {
+            animation: pulse-animation 2s infinite;
+        }
+        @keyframes pulse-animation {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(37, 99, 235, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); }
+        }
+    </style>
 </head>
-<body>
-    <!-- Conteúdo da página principal -->
+<body class="antialiased">
+
+    <main>
+        <section class="bg-white">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-28 text-center">
+                 <div class="flex justify-center items-center mb-6">
+                    <div class="w-14 h-14 bg-blue-600 rounded-full flex items-center justify-center pulse-logo-outer">
+                        <div class="w-3 h-3 bg-white rounded-full"></div>
+                    </div>
+                    <span class="font-bold text-3xl ml-4 text-slate-800">Pulso</span>
+                </div>
+                <h1 class="text-4xl md:text-5xl font-bold text-slate-900 leading-tight mt-4">
+                    Pare de depender de algoritmos. <br class="hidden md:block"> Fale <span class="text-blue-600">diretamente</span> com os seus clientes.
+                </h1>
+                <p class="mt-6 max-w-2xl mx-auto text-lg md:text-xl text-slate-600 font-light">
+                    Pulso é a ferramenta de notificações que garante que a sua mensagem de promoção ou novidade seja entregue instantaneamente.
+                </p>
+                <a href="/admin" class="mt-10 inline-block bg-blue-600 text-white font-bold py-4 px-10 rounded-full text-lg hover:bg-blue-700 transition-transform transform hover:scale-105 shadow-lg">
+                    Comece a usar agora
+                </a>
+            </div>
+        </section>
+
+        <section id="como-funciona" class="py-24 md:py-28">
+            <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center mb-12">
+                    <h2 class="text-3xl font-bold text-slate-800">Resultados em 3 Passos Simples</h2>
+                    <p class="mt-3 text-lg text-slate-600">Esta secção detalha o processo de utilização do Pulso. Clique em cada passo para ver como é fácil transformar uma ideia numa notificação que gera vendas. A interatividade permite-lhe focar-se em cada etapa do processo, compreendendo o quão simples e rápido é comunicar com os seus clientes.</p>
+                </div>
+                <div class="grid md:grid-cols-3 gap-8 md:gap-12 text-center">
+                    <div id="step-1" class="interactive-step active">
+                        <div class="w-20 h-20 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto text-3xl mb-5">🔗</div>
+                        <h3 class="text-xl font-semibold text-slate-800">1. Partilhe o seu Link</h3>
+                        <p class="text-slate-600 mt-2">Coloque o seu link na bio, num QR code ou envie diretamente. A inscrição é feita com um clique.</p>
+                    </div>
+                    <div id="step-2" class="interactive-step">
+                        <div class="w-20 h-20 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto text-3xl mb-5">✍️</div>
+                        <h3 class="text-xl font-semibold text-slate-800">2. Crie a sua Mensagem</h3>
+                        <p class="text-slate-600 mt-2">No seu painel, escreva uma notificação rápida sobre uma promoção, produto novo ou evento.</p>
+                    </div>
+                    <div id="step-3" class="interactive-step">
+                        <div class="w-20 h-20 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto text-3xl mb-5">🚀</div>
+                        <h3 class="text-xl font-semibold text-slate-800">3. Envie e Venda Mais</h3>
+                        <p class="text-slate-600 mt-2">A notificação chega instantaneamente a todos os inscritos, gerando resultados imediatos.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="py-24 md:py-28 bg-white">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center mb-12">
+                    <h2 class="text-3xl font-bold text-slate-800">Vantagens que Impulsionam o seu Negócio</h2>
+                     <p class="mt-3 text-lg text-slate-600">Explore os principais benefícios de usar o Pulso. Cada cartão destaca uma funcionalidade desenhada para lhe dar mais controlo, poupar tempo e aumentar a eficácia da sua comunicação, traduzindo-se em melhores resultados comerciais.</p>
+                </div>
+                <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <div class="card">
+                        <span class="text-4xl">🎯</span>
+                        <h3 class="text-xl font-semibold text-slate-800 mt-4">Comunicação Direta</h3>
+                        <p class="text-slate-600 mt-2">As suas mensagens chegam diretamente ao ecrã dos clientes, com taxas de visualização próximas de 100%.</p>
+                    </div>
+                    <div class="card">
+                        <span class="text-4xl">🗓️</span>
+                        <h3 class="text-xl font-semibold text-slate-800 mt-4">Agendamento Inteligente</h3>
+                        <p class="text-slate-600 mt-2">Planeie as suas campanhas com antecedência e deixe que o Pulso envie as notificações na hora certa.</p>
+                    </div>
+                    <div class="card">
+                        <span class="text-4xl">✨</span>
+                        <h3 class="text-xl font-semibold text-slate-800 mt-4">Ideias com IA</h3>
+                        <p class="text-slate-600 mt-2">Sem inspiração? A nossa IA gera sugestões de mensagens criativas e eficazes para o seu negócio.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <section id="depoimentos" class="py-24 md:py-28">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                 <div class="text-center mb-12">
+                    <h2 class="text-3xl font-bold text-slate-800">Histórias de Sucesso Reais</h2>
+                    <p class="mt-3 text-lg text-slate-600">Nesta secção, apresentamos testemunhos reais e dados concretos do impacto do Pulso. O gráfico ilustra o aumento de 30% no movimento de um restaurante, mostrando visualmente o poder da comunicação instantânea. Veja como negócios como o seu estão a prosperar.</p>
+                </div>
+                <div class="grid lg:grid-cols-2 gap-12 items-center">
+                    <div class="space-y-8">
+                        <div class="card">
+                            <p class="text-slate-600 italic">"Desde que comecei a usar o Pulso, a minha promoção de 'pão quente' esgota em minutos. Os clientes adoram ser avisados na hora!"</p>
+                            <div class="mt-4 pt-4 border-t border-slate-200">
+                                <p class="font-semibold text-slate-800">Mariana C.</p>
+                                <p class="text-sm text-slate-500">Dona de Padaria</p>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <p class="text-slate-600 italic">"Para as nossas promoções-relâmpago, não há nada melhor. Consigo liquidar o stock de uma coleção em poucas horas."</p>
+                            <div class="mt-4 pt-4 border-t border-slate-200">
+                                <p class="font-semibold text-slate-800">Ana Júlia</p>
+                                <p class="text-sm text-slate-500">Proprietária de Loja de Roupas</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card">
+                         <p class="text-slate-600 italic mb-4">"Finalmente uma forma de anunciar o 'prato do dia' que funciona. O movimento na hora de almoço aumentou 30%."</p>
+                         <div class="mb-4 pt-4 border-t border-slate-200">
+                            <p class="font-semibold text-slate-800">Ricardo L.</p>
+                            <p class="text-sm text-slate-500">Gerente de Restaurante</p>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="impactChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <section id="cta" class="py-24 md:py-28 bg-white">
+            <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center card bg-blue-600 text-white p-10 md:p-16 rounded-3xl shadow-2xl">
+                <h2 class="text-4xl font-bold">Pronto para sentir o impacto?</h2>
+                <p class="mt-4 text-xl text-blue-100 max-w-2xl mx-auto">Crie a sua conta e comece a construir um canal de comunicação que realmente funciona. Os seus clientes estão à espera.</p>
+                <a href="#" class="mt-8 inline-block bg-white text-blue-600 font-bold py-4 px-10 rounded-full text-lg hover:bg-slate-100 transition-colors">
+                    Criar a minha conta grátis
+                </a>
+            </div>
+        </section>
+    </main>
+
+    <footer class="bg-slate-800 text-white py-8">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <p>&copy; 2025 Pulso. Todos os direitos reservados.</p>
+            <p class="text-sm text-slate-400 mt-1">O dínamo da notificação.</p>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            
+            const steps = document.querySelectorAll('.interactive-step');
+            steps.forEach(step => {
+                step.addEventListener('click', () => {
+                    steps.forEach(s => s.classList.remove('active'));
+                    step.classList.add('active');
+                });
+            });
+
+            const impactChartCtx = document.getElementById('impactChart');
+            if (impactChartCtx) {
+                const impactChart = new Chart(impactChartCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Movimento Semanal (Antes)', 'Movimento Semanal (Com Pulso)'],
+                        datasets: [{
+                            label: 'Clientes no Restaurante',
+                            data: [100, 130],
+                            backgroundColor: [
+                                'rgba(203, 213, 225, 0.5)',
+                                'rgba(59, 130, 246, 0.5)'
+                            ],
+                            borderColor: [
+                                'rgb(203, 213, 225)',
+                                'rgb(59, 130, 246)'
+                            ],
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: {
+                                    color: 'rgba(200, 200, 200, 0.1)'
+                                },
+                                ticks: {
+                                    color: '#64748b'
+                                }
+                            },
+                            x: {
+                                grid: {
+                                    display: false
+                                },
+                                ticks: {
+                                    color: '#64748b'
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false,
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.dataset.label || '';
+                                        if (label) {
+                                            label += ': ';
+                                        }
+                                        if (context.parsed.y !== null) {
+                                            label += context.parsed.y;
+                                            if (context.dataIndex === 1) {
+                                                label += ' (+30%)';
+                                            }
+                                        }
+                                        return label;
+                                    }
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: 'Impacto no Movimento do Restaurante',
+                                color: '#334155',
+                                font: {
+                                    size: 16
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        });
+    </script>
 </body>
 </html>
