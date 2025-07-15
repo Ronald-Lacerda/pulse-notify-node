@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
             validateToken(token).then(isValid => {
                 if (isValid) {
                     // Redireciona para o painel admin
-                    window.location.href = 'admin.html';
+                    window.location.href = 'admin';
                 }
             });
         }
@@ -87,7 +87,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 localStorage.setItem('admin_name', data.name);
 
                 // Redireciona para o painel
-                window.location.href = 'admin.html';
+                window.location.href = 'admin';
             } else {
                 showError(data.error || 'Erro ao fazer login');
             }

@@ -71,7 +71,7 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     function initializePageSpecificFeatures() {
         // Funcionalidades específicas para a página de instruções do iOS
-        if (window.location.pathname.includes('ios-instructions.html')) {
+        if (window.location.pathname.includes('ios-instructions')) {
             initializeIOSInstructionsPage();
         }
     }

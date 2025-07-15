@@ -84,7 +84,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const token = localStorage.getItem('super_admin_token');
         
         if (!token) {
-            window.location.href = '/super-admin-login.html';
+            window.location.href = '/super-admin-login';
             return;
         }
 
@@ -104,7 +104,7 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (error) {
             console.error('Erro na autenticação:', error);
             localStorage.removeItem('super_admin_token');
-            window.location.href = '/super-admin-login.html';
+            window.location.href = '/super-admin-login';
         }
     }
 
@@ -496,7 +496,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function handleLogout() {
         showConfirmModal('Tem certeza que deseja sair?', () => {
             localStorage.removeItem('super_admin_token');
-            window.location.href = '/super-admin-login.html';
+            window.location.href = '/super-admin-login';
         });
     }
 

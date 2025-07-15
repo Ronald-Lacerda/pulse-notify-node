@@ -48,7 +48,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 if (response.ok) {
                     // Token válido, redirecionar
-                    window.location.href = '/admin-management.html';
+                    window.location.href = '/admin-management';
                     return;
                 }
             } catch (error) {
@@ -101,7 +101,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Redirecionar após um breve delay
                 setTimeout(() => {
-                    window.location.href = '/admin-management.html';
+                    window.location.href = '/admin-management';
                 }, 1000);
                 
             } else {

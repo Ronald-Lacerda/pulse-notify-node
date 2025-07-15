@@ -185,7 +185,7 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.removeItem('admin_id');
         localStorage.removeItem('admin_username');
         localStorage.removeItem('admin_name');
-        window.location.href = 'login.html';
+        window.location.href = 'login';
     }
 
     /**
@@ -209,7 +209,7 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.removeItem('admin_id');
         localStorage.removeItem('admin_username');
         localStorage.removeItem('admin_name');
-        window.location.href = 'login.html';
+        window.location.href = 'login';
     }
 
     /**
