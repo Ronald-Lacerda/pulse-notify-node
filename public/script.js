@@ -60,6 +60,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Inicialização
     initializeApp();
 
+    // Verifica se o PWA foi aberto e precisa redirecionar para a página de subscribe
+    checkPWARedirect();
+
     // Verifica se deve redirecionar para instruções do iOS
     // Adiciona um pequeno delay para garantir que tudo esteja carregado
     setTimeout(() => {
@@ -215,6 +218,28 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
+     * Função de debug para verificar detecção de dispositivos
+     */
+    function debugDeviceDetection() {
+        const userAgent = navigator.userAgent;
+        const iosDetected = isIOS();
+        const isStandalone = window.navigator.standalone;
+        const isDisplayModeStandalone = window.matchMedia('(display-mode: standalone)').matches;
+        
+        console.log('=== DEBUG DEVICE DETECTION ===');
+        console.log('User Agent:', userAgent);
+        console.log('iOS Detected:', iosDetected);
+        console.log('Is Standalone:', isStandalone);
+        console.log('Display Mode Standalone:', isDisplayModeStandalone);
+        console.log('Android in UA:', /Android/.test(userAgent));
+        console.log('iPad|iPhone|iPod in UA:', /iPad|iPhone|iPod/.test(userAgent));
+        console.log('Mac + Touch:', userAgent.includes('Mac') && navigator.maxTouchPoints > 1);
+        console.log('Safari + Mobile + Version:', userAgent.includes('Safari') && userAgent.includes('Mobile') && userAgent.includes('Version/'));
+        console.log('Chrome in UA:', userAgent.includes('Chrome'));
+        console.log('===============================');
+    }
+
+    /**
      * Verifica se deve mostrar instruções do iOS
      */
     function checkIOSRedirect() {
@@ -223,11 +248,16 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        // Debug da detecção (remover em produção se necessário)
+        debugDeviceDetection();
+
         // Verificações individuais para debug
         const iosDetected = isIOS();
         const isStandalone = window.navigator.standalone;
         const isDisplayModeStandalone = window.matchMedia('(display-mode: standalone)').matches;
         const shouldShowInstructions = iosDetected && !isStandalone && !isDisplayModeStandalone;
+
+        console.log('Should show iOS instructions:', shouldShowInstructions);
 
         // Verifica se é iOS e está em qualquer navegador (não em modo standalone/PWA)
         if (shouldShowInstructions) {
