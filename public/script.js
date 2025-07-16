@@ -223,7 +223,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Verificações individuais para debug
         const iosDetected = isIOS();
         const isStandalone = window.navigator.standalone;
         const isDisplayModeStandalone = window.matchMedia('(display-mode: standalone)').matches;
@@ -636,6 +635,9 @@ document.addEventListener('DOMContentLoaded', () => {
             // Registra service worker
             await registerServiceWorker();
             
+            // Verifica se deve redirecionar para subscribe baseado nos parâmetros da URL
+            checkSubscribeRedirect();
+            
         } catch (error) {
             console.error('Erro na inicialização:', error);
             showFinalState('error', 'Erro de Inicialização', 'Não foi possível inicializar o sistema de notificações.');
@@ -836,8 +838,6 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     async function registerSubscriptionOnServer(subscription) {
         try {
-            // Debug: verificar valores antes de enviar
-            
             const userInfo = {
                 userId: userId,
                 adminId: adminId, // Formato antigo - para compatibilidade
