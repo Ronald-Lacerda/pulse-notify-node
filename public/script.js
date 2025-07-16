@@ -649,13 +649,13 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     function checkSubscribeRedirect() {
         // Só funciona na página inicial
-        if (window.location.pathname !== '/') {
+        if (window.location.pathname !== '/subscribe') {
             return;
         }
 
         // Verifica se tem channelId ou adminId na URL atual
         const urlParams = new URLSearchParams(window.location.search);
-        const channelId = urlParams.get('channel');
+        const channelId = urlParams.get('channelId');
 
         if (channelId) {
             // Salva os parâmetros no localStorage para uso futuro (PWA)
