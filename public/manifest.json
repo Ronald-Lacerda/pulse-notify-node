@@ -1,7 +1,7 @@
 {
     "name": "Pulso Notificações",
     "short_name": "Pulso",
-    "start_url": "/",
+    "start_url": "/subscribe",
     "display": "standalone",
     "background_color": "#ffffff",
     "theme_color": "#1e293b",
