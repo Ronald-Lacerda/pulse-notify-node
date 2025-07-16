@@ -13,24 +13,35 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Detecta se é um dispositivo iOS
     const isIOS = () => {
+        const userAgent = navigator.userAgent;
+        
+        // Primeiro, verifica se é Android (para evitar falsos positivos)
+        if (/Android/.test(userAgent)) {
+            return false;
+        }
+        
         // Check for common iOS device user agents
-        if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
-          return true;
+        if (/iPad|iPhone|iPod/.test(userAgent)) {
+            return true;
         }
 
         // Modern iPads on iPadOS (which report as 'MacIntel' with touch support)
         // This is a more reliable way to detect iPads running iPadOS.
-        if (navigator.userAgent.includes('Mac') && navigator.maxTouchPoints > 1) {
-          return true;
+        if (userAgent.includes('Mac') && navigator.maxTouchPoints > 1) {
+            return true;
         }
 
-        // Additional check for iOS Safari
-        if (navigator.userAgent.includes('Safari') && navigator.userAgent.includes('Mobile')) {
-          return true;
+        // Verificação mais específica para iOS Safari (evitando Android)
+        // iOS Safari sempre inclui "Version/" no user agent, Android Chrome não
+        if (userAgent.includes('Safari') && 
+            userAgent.includes('Mobile') && 
+            userAgent.includes('Version/') && 
+            !userAgent.includes('Chrome')) {
+            return true;
         }
 
         return false;
-      };
+    };
 
     // Detecta se está em qualquer navegador no iOS (não apenas Safari)
     const isIOSBrowser = () => {
