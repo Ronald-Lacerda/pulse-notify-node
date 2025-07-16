@@ -645,47 +645,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
-     * Verifica se deve redirecionar para a página de subscribe
-     */
-    function checkSubscribeRedirect() {
-        // Só funciona na página inicial
-        if (window.location.pathname !== '/subscribe') {
-            return;
-        }
-
-        // Verifica se tem channelId ou adminId na URL atual
-        const urlParams = new URLSearchParams(window.location.search);
-        const channelId = urlParams.get('channelId');
-
-        if (channelId) {
-            // Salva os parâmetros no localStorage para uso futuro (PWA)
-            if (channelId) {
-                localStorage.setItem('pulso_channel_id', channelId);
-            }
-
-            // Redireciona para a página de subscribe mantendo os parâmetros
-            const subscribeUrl = `/subscribe${window.location.search}`;
-            window.location.href = subscribeUrl;
-            return;
-        }
-
-        // Se não tem parâmetros na URL, verifica se tem parâmetros salvos (para PWA)
-        const savedChannelId = localStorage.getItem('pulso_channel_id');
-
-        if (savedChannelId) {
-            // Reconstrói a URL com os parâmetros salvos
-            const params = new URLSearchParams();
-            if (savedChannelId) {
-                params.set('channel', savedChannelId);
-            }
-
-            // Redireciona para a página de subscribe com os parâmetros salvos
-            const subscribeUrl = `/subscribe?${params.toString()}`;
-            window.location.href = subscribeUrl;
-        }
-    }
-
-    /**
      * Carrega chave VAPID do servidor
      */
     async function loadVapidKey() {
@@ -744,7 +703,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function getAdminIdFromURL() {
         const urlParams = new URLSearchParams(window.location.search);
         const adminId = urlParams.get('admin');
-
+        
         if (adminId) {
             // Salva o ID do admin no localStorage para futuras referências
             localStorage.setItem('pulso_admin_id', adminId);
@@ -755,7 +714,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return savedAdminId;
             }
         }
-
+        
         return adminId;
     }
 
